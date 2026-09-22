@@ -15,9 +15,11 @@ const envSchema = z.object({
     .positive()
     .default(3000),
 
-  DATABASE_URL: z
-    .string()
-    .min(1, "DATABASE_URL is required"),
+  DATABASE_PROVIDER: z
+    .enum(["in-memory", "supabase", "postgres"])
+    .default("in-memory"),
+
+  DATABASE_URL: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
