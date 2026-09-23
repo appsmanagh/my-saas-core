@@ -31,6 +31,12 @@ async function main() {
       error instanceof Error ? error.message : error,
     );
   }
+
+  const userById = await service.getUserById("abc");
+
+  console.log("Not found user:", userById);
+
+
 }
 
 main();
