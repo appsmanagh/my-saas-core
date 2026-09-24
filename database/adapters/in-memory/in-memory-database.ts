@@ -19,4 +19,13 @@ export class InMemoryDatabase implements Database {
   async healthCheck(): Promise<boolean> {
     return this.connected;
   }
+
+  async query<T>(
+    _text: string,
+    _values?: unknown[],
+  ): Promise<T[]> {
+    throw new Error(
+      "Raw SQL queries are not supported by InMemoryDatabase",
+    );
+  }
 }
