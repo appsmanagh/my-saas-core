@@ -18,10 +18,12 @@ import type { User } from "../user";
 //11. race conditions
 import { translatePostgresError } from "../../database/adapters/postgres/postgres-error";
 
+//12. aqui se agrego  status: "active" | "inactive";
 interface UserRow {
   id: string;
   email: string;
   name: string;
+  status: "active" | "inactive";
   created_at: Date;
   updated_at: Date;
 }
@@ -36,6 +38,7 @@ export class PostgresUserRepository implements UserRepository {
           id,
           email,
           name,
+          status,
           created_at,
           updated_at
         FROM users
@@ -58,6 +61,7 @@ export class PostgresUserRepository implements UserRepository {
           id,
           email,
           name,
+          status,
           created_at,
           updated_at
         FROM users
@@ -76,56 +80,71 @@ export class PostgresUserRepository implements UserRepository {
   async create(user: User): Promise<User> {
     //8. se uso este try para implementar postgress errors
     //11. race conditions
-        try {
-            const rows = await this.database.query<UserRow>(
-            `
-                INSERT INTO users (
-                id,
-                email,
-                name,
-                created_at,
-                updated_at
-                )
-                VALUES ($1, $2, $3, $4, $5)
-                RETURNING
-                id,
-                email,
-                name,
-                created_at,
-                updated_at
-            `,
-            [
-                user.id,
-                user.email,
-                user.name,
-                user.createdAt,
-                user.updatedAt,
-            ],
-            );
+    //12. aqui se agrego  status
+    try {
+      const rows = await this.database.query<UserRow>(
+        `
+          INSERT INTO users (
+            id,
+            email,
+            name,
+            status,
+            created_at,
+            updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING
+            id,
+            email,
+            name,
+            status,
+            created_at,
+            updated_at
+        `,
+        [
+          user.id,
+          user.email,
+          user.name,
+          user.status,
+          user.createdAt,
+          user.updatedAt,
+        ],
+      );
 
-            return this.toUser(rows[0]);
-        } catch (error) {
-            //8. esi se usa postgres errors, 
+      return this.toUser(rows[0]);
+    } catch (error) {
+      //8. esi se usa postgres errors, 
             // esta validation tambien se hace en userservice al momento de crear el user 
             // pero agregando esta validation se garantiza que no se creen dos registros con el mismo email
             //11. race conditions
-            translatePostgresError(error);
-        }
+      /*
+       * PostgreSQL puede lanzar un error de UNIQUE
+       * si dos requests intentan crear el mismo email
+       * simultáneamente.
+       *
+       * translatePostgresError() convierte ese error
+       * de infraestructura en un AppError de nuestra aplicación.
+       */
+      translatePostgresError(error);
     }
+  }
 
-  async update(user: User): Promise<User> {
+  async update(user: User): Promise<User | null> {
+    //12. aqui se agrego  status
     const rows = await this.database.query<UserRow>(
       `
         UPDATE users
         SET
           email = $2,
           name = $3,
-          updated_at = $4
+          status = $4,
+          updated_at = $5
         WHERE id = $1
         RETURNING
           id,
           email,
           name,
+          status,
           created_at,
           updated_at
       `,
@@ -133,12 +152,13 @@ export class PostgresUserRepository implements UserRepository {
         user.id,
         user.email,
         user.name,
+        user.status,
         user.updatedAt,
       ],
     );
 
     if (rows.length === 0) {
-      throw new Error("User not found");
+      return null;
     }
 
     return this.toUser(rows[0]);
@@ -155,10 +175,12 @@ export class PostgresUserRepository implements UserRepository {
   }
 
   private toUser(row: UserRow): User {
+    //12. aqui se agrego  status
     return {
       id: row.id,
       email: row.email,
       name: row.name,
+      status: row.status,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
