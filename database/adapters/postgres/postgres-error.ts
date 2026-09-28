@@ -1,4 +1,4 @@
-//8. para Traducir errores de PostgreSQL
+//8. para Traducir errores de propios y de BORDE PostgreSQL
 
 import { ConflictError } from "../../../errors";
 import { DatabaseError } from "../../../errors";

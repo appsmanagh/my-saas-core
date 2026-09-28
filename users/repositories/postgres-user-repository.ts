@@ -15,6 +15,7 @@ import type { UserRepository } from "../user-repository";
 import type { User } from "../user";
 
 //8. asi se implementa el modulo de postgress errors
+//11. race conditions
 import { translatePostgresError } from "../../database/adapters/postgres/postgres-error";
 
 interface UserRow {
@@ -74,6 +75,7 @@ export class PostgresUserRepository implements UserRepository {
 
   async create(user: User): Promise<User> {
     //8. se uso este try para implementar postgress errors
+    //11. race conditions
         try {
             const rows = await this.database.query<UserRow>(
             `
@@ -106,6 +108,7 @@ export class PostgresUserRepository implements UserRepository {
             //8. esi se usa postgres errors, 
             // esta validation tambien se hace en userservice al momento de crear el user 
             // pero agregando esta validation se garantiza que no se creen dos registros con el mismo email
+            //11. race conditions
             translatePostgresError(error);
         }
     }
