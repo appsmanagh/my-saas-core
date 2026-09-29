@@ -158,4 +158,20 @@ export class UserService {
 
     return updatedUser;
   }
+
+  //17. se agrego esta function para manejar mejor el error de login
+  async findUserByEmail(
+    email: string,
+  ): Promise<User | null> {
+    const normalizedEmail =
+      email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      throw new ValidationError("Email is required");
+    }
+
+    return this.userRepository.findByEmail(
+      normalizedEmail,
+    );
+  }
 }

@@ -7,3 +7,7 @@ export { ConflictError } from "./conflict-error";
 
 //8. aqui se debe incluir el nuevo modulo de postgress errors
 export { DatabaseError } from "./database-error";
+
+//17. aqui se incluye el module de error de login
+
+export * from "./unauthorized-error";
