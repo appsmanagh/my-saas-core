@@ -147,4 +147,65 @@ export class AuthService {
       expiresAt,
     };
   }
+
+  //18. esta funtion es para validar una session 
+  async getUserBySessionToken(
+    token: string,
+  ): Promise<User> {
+    if (!token) {
+      throw new UnauthorizedError(
+        "Invalid session",
+      );
+    }
+
+    const tokenHash =
+      this.sessionTokenService.hashToken(token);
+
+    const session =
+      await this.sessionRepository.findByTokenHash(
+        tokenHash,
+      );
+
+    if (!session) {
+      throw new UnauthorizedError(
+        "Invalid session",
+      );
+    }
+
+    const user =
+      await this.userService.getUserById(
+        session.userId,
+      );
+
+    if (user.status !== "active") {
+      throw new UnauthorizedError(
+        "Invalid session",
+      );
+    }
+
+    return user;
+  }
+
+//18. function de logout
+  async logout(token: string): Promise<void> {
+    if (!token) {
+      return;
+    }
+
+    const tokenHash =
+      this.sessionTokenService.hashToken(token);
+
+    const session =
+      await this.sessionRepository.findByTokenHash(
+        tokenHash,
+      );
+
+    if (!session) {
+      return;
+    }
+
+    await this.sessionRepository.delete(
+      session.id,
+    );
+  }
 }
