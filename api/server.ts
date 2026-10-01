@@ -25,6 +25,11 @@ import cookieParser from "cookie-parser";
 import { errorMiddleware } 
 from "./middleware/error-middleware";
 
+
+//20. asi se importa una nueva ruta de endpoints 
+import { createUserRoutes } 
+from "./routes/user-routes";
+
 const app = express();
 
 app.use(express.json());
@@ -67,6 +72,15 @@ async function bootstrap() {
     "/api/auth",
     createAuthRoutes(
       authService,
+      requireAuth,
+    ),
+  );
+
+//20. asi se importa una nueva ruta de endpoints 
+  app.use(
+    "/api/users",
+    createUserRoutes(
+      userService,
       requireAuth,
     ),
   );
