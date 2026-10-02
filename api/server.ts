@@ -30,6 +30,16 @@ from "./middleware/error-middleware";
 import { createUserRoutes } 
 from "./routes/user-routes";
 
+//22. composition root - LoginRateLimit
+import {
+  InMemoryRateLimiter,
+} from "../security/adapters/in-memory-rate-limiter";
+
+//22. composition root - LoginRateLimit
+import {
+  LoginRateLimit,
+} from "../security/login-rate-limit";
+
 const app = express();
 
 app.use(express.json());
@@ -57,12 +67,41 @@ async function bootstrap() {
   const sessionRepository =
     new PostgresSessionRepository(database);
 
+//22. composition root - LoginRateLimit
+  //22 aqui es donde se hace el cambi a redis
+  // Rate limiter por IP
+  const ipRateLimiter =
+    new InMemoryRateLimiter(
+      10,
+      60,
+    );
+
+//22. composition root - LoginRateLimit
+  //22 aqui es donde se hace el cambi a redis
+  // Rate limiter por email
+  const emailRateLimiter =
+    new InMemoryRateLimiter(
+      5,
+      60,
+    );
+
+//22. composition root - LoginRateLimit
+  //22 aqui es donde se hace el cambi a redis
+  // Política de rate limiting para login
+  const loginRateLimit =
+    new LoginRateLimit(
+      ipRateLimiter,
+      emailRateLimiter,
+    );
+
+//22 se agrega loginRateLimit a AuthService
   const authService =
     new AuthService(
       userService,
       passwordService,
       authRepository,
       sessionRepository,
+      loginRateLimit,
     );
 
   const requireAuth =

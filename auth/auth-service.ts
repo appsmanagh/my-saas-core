@@ -23,10 +23,20 @@ import type { PasswordService } from "./password-service";
 import type { SessionRepository } from "./sessions/session-repository";
 import { SessionTokenService } from "./sessions/session-token-service";
 
+//21. se importa el login-rate-limit
+import {
+  LoginRateLimit,
+} from "../security/login-rate-limit";
+
 import {
   ConflictError,
   UnauthorizedError,
 } from "../errors";
+
+//21. se importa el modulo de validate password
+import {
+  validatePassword,
+} from "../security/password-policy";
 
 export interface AuthSessionResult {
   user: User;
@@ -38,11 +48,13 @@ export class AuthService {
   private readonly sessionTokenService =
     new SessionTokenService();
 
+    //21. se incluye el rite limiter en el constructor
   constructor(
     private readonly userService: UserService,
     private readonly passwordService: PasswordService,
     private readonly authRepository: AuthRepository,
     private readonly sessionRepository: SessionRepository,
+    private readonly loginRateLimit: LoginRateLimit,
   ) {}
 
   async register(input: {
@@ -50,6 +62,11 @@ export class AuthService {
     name: string;
     password: string;
   }): Promise<User> {
+
+
+//21. asi se usa el modulo de validate password
+    validatePassword(input.password);
+
     const user = await this.userService.createUser({
       email: input.email,
       name: input.name,
@@ -82,54 +99,112 @@ export class AuthService {
   }
 
   async login(
-    email: string,
-    password: string,
+    input: {
+      email: string;
+      password: string;
+      ip: string;
+    },
   ): Promise<AuthSessionResult> {
 
+    const normalizedEmail =
+      input.email.trim().toLowerCase();
 
+
+    // 21. Comprobar rate limit
+    await this.loginRateLimit.check({
+      ip: input.ip,
+      email: normalizedEmail,
+    });
+
+
+    // 2. Buscar usuario
     const user =
-    await this.userService.findUserByEmail(email);
+      await this.userService.findUserByEmail(
+        normalizedEmail,
+      );
 
+
+    // 21. Usuario inexistente
     if (!user) {
-        throw new UnauthorizedError(
-            "Invalid email or password",
-        );
+
+      await this.loginRateLimit.recordFailure({
+        ip: input.ip,
+        email: normalizedEmail,
+      });
+
+      throw new UnauthorizedError(
+        "Invalid email or password",
+      );
     }
 
+
+    // 4. Buscar credenciales
     const credentials =
       await this.authRepository.findByUserId(
         user.id,
       );
 
+
+    // 21. Credenciales inexistentes
     if (!credentials) {
+
+      await this.loginRateLimit.recordFailure({
+        ip: input.ip,
+        email: normalizedEmail,
+      });
+
       throw new UnauthorizedError(
         "Invalid email or password",
       );
     }
 
+
+    // 6. Verificar contraseña
     const passwordValid =
       await this.passwordService.verifyPassword(
-        password,
+        input.password,
         credentials.passwordHash,
       );
 
+
+    // 21. Contraseña incorrecta
     if (!passwordValid) {
+
+      await this.loginRateLimit.recordFailure({
+        ip: input.ip,
+        email: normalizedEmail,
+      });
+
       throw new UnauthorizedError(
         "Invalid email or password",
       );
     }
 
+
+    // 21. Login correcto → limpiar rate limit
+    await this.loginRateLimit.reset({
+      ip: input.ip,
+      email: normalizedEmail,
+    });
+
+
+    // 9. Generar token de sesión
     const token =
       this.sessionTokenService.generateToken();
 
+
+    // 10. Hashear token antes de almacenarlo
     const tokenHash =
       this.sessionTokenService.hashToken(token);
 
+
+    // 11. Crear sesión
     const now = new Date();
 
     const expiresAt = new Date(
       now.getTime() + 1000 * 60 * 60 * 24 * 7,
     );
+
 
     const session = {
       id: crypto.randomUUID(),
@@ -139,8 +214,13 @@ export class AuthService {
       createdAt: now,
     };
 
-    await this.sessionRepository.create(session);
 
+    await this.sessionRepository.create(
+      session,
+    );
+
+
+    // 12. Devolver token real al API
     return {
       user,
       token,

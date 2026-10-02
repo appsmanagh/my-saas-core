@@ -56,12 +56,15 @@ export function createAuthRoutes(
         const {
           email,
           password,
+          ip
         } = request.body;
 
+//21. aqui se agrega el parameter ip para manejar loginRateLimit
         const result =
           await authService.login(
             email,
             password,
+            ip,
           );
 
         response.cookie(
