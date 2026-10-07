@@ -61,11 +61,11 @@ export function createAuthRoutes(
 
 //21. aqui se agrega el parameter ip para manejar loginRateLimit
         const result =
-          await authService.login(
-            email,
-            password,
-            ip,
-          );
+        await authService.login({
+          email,
+          password,
+          ip: request.ip,
+        });
 
         response.cookie(
           "session_token",

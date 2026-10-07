@@ -11,3 +11,5 @@ export { DatabaseError } from "./database-error";
 //17. aqui se incluye el module de error de login
 
 export * from "./unauthorized-error";
+
+export { RateLimitError } from "./rateLimitError";
