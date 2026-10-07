@@ -3,7 +3,7 @@ import { AppError } from "./app-error";
 
 export class DatabaseError extends AppError {
   constructor(message = "Database operation failed") {
-    super(message, "DATABASE_ERROR", 500);
+    super(message, 500, "DATABASE_ERROR");
 
     this.name = "DatabaseError";
   }

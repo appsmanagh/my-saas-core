@@ -12,6 +12,13 @@ import {
  extractSessionToken
 } from "../session-token";
 
+
+// 24. se importa el auth validation 
+import {
+  validateLoginInput,
+  validateRegisterInput,
+} from "../validation/auth-validation";
+
 export function createAuthRoutes(
   authService: AuthService,
   requireAuth: (
@@ -27,18 +34,26 @@ export function createAuthRoutes(
     "/register",
     async (request, response, next) => {
       try {
-        const {
-          email,
-          name,
-          password,
-        } = request.body;
-
+         //24 usamos aqui el validateRegisterInput
+        const input =
+        validateRegisterInput(request.body);
+        
+        // 24. y aqui lo usamos el input
         const user =
-          await authService.register({
-            email,
-            name,
-            password,
-          });
+        await authService.register(input);
+        //24. y esto es el code reemplazado
+        // const {
+        //   email,
+        //   name,
+        //   password,
+        // } = request.body;
+
+        // const user =
+        //   await authService.register({
+        //     email,
+        //     name,
+        //     password,
+        //   });
 
         response.status(201).json({
           user,
@@ -53,19 +68,31 @@ export function createAuthRoutes(
     "/login",
     async (request, response, next) => {
       try {
-        const {
-          email,
-          password,
-          ip
-        } = request.body;
 
-//21. aqui se agrega el parameter ip para manejar loginRateLimit
+        //24 usamos aqui el validateRegisterInput
+        const input =
+        validateLoginInput(request.body);
+
+         // 24. y aqui lo usamos el input
         const result =
         await authService.login({
-          email,
-          password,
+          ...input,
           ip: request.ip,
         });
+        //24. y esto es el code reemplazado
+        // const {
+        //   email,
+        //   password,
+        //   ip
+        // } = request.body;
+
+        // //21. aqui se agrega el parameter ip para manejar loginRateLimit
+        // const result =
+        // await authService.login({
+        //   email,
+        //   password,
+        //   ip: request.ip,
+        // });
 
         response.cookie(
           "session_token",

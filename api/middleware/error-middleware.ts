@@ -15,26 +15,30 @@
 
 // Entonces necesitamos un traductor:
 
-import type {
-  Request,
-  Response,
-  NextFunction,
-} from "express";
-
-import {
-  AppError,
-} from "../../errors";
-
-
 export function errorMiddleware(
   error: unknown,
   request: Request,
   response: Response,
   next: NextFunction,
 ) {
+  if (
+    error instanceof SyntaxError &&
+    "status" in error &&
+    error.status === 400 &&
+    "type" in error &&
+    error.type === "entity.parse.failed"
+  ) {
+    response.status(400).json({
+      error: {
+        message: "Invalid JSON",
+        code: "INVALID_JSON",
+      },
+    });
+
+    return;
+  }
 
   if (error instanceof AppError) {
-
     response.status(error.statusCode).json({
       error: {
         message: error.message,
@@ -45,9 +49,7 @@ export function errorMiddleware(
     return;
   }
 
-
   console.error(error);
-
 
   response.status(500).json({
     error: {
