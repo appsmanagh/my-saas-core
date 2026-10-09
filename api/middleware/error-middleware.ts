@@ -15,6 +15,8 @@
 
 // Entonces necesitamos un traductor:
 
+import { AppError } from "../../errors";
+
 export function errorMiddleware(
   error: unknown,
   request: Request,

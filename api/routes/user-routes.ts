@@ -9,6 +9,9 @@ import {
 
 import type { UserService } from "../../users/user-service";
 
+//25. se importa el validation input
+import { validateUpdateUserProfileInput } from "../validation/user-validation";
+
 
 export function createUserRoutes(
   userService: UserService,
@@ -53,14 +56,26 @@ export function createUserRoutes(
     )=>{
 
     try {
+// 25. aqui se uso la function : validateUpdateUserProfileInput
+    const input =
+          validateUpdateUserProfileInput(
+        request.body,
+      );
 
     const user =
-        await userService.updateProfile(
-        request.user!.id,
-        {
-            name: request.body.name,
-        },
-        );
+      await userService.updateProfile(
+        request.user.id,
+        input,
+      );
+
+    //25. este fue el code reemplazado
+    // const user =
+    //     await userService.updateProfile(
+    //     request.user!.id,
+    //     {
+    //         name: request.body.name,
+    //     },
+    //     );
 
 
     response.json({
