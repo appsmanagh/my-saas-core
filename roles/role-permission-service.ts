@@ -24,6 +24,7 @@ export class RolePermissionService {
     // Validate the role before changing its permissions.
     await this.roleService.getRoleById(roleId);
 
+    // Remove duplicate keys while preserving their order.
     const uniqueKeys = [...new Set(permissionKeys)];
 
     if (uniqueKeys.length === 0) {
@@ -32,11 +33,11 @@ export class RolePermissionService {
       );
     }
 
-    // Ensure every requested permission exists in the catalog.
-    await this.permissionService.getPermissionsByKeys(
-      uniqueKeys,
-    );
+    // Validate all requested permissions before writing anything.
+    await this.permissionService.getPermissionsByKeys(uniqueKeys);
 
+    // The repository currently performs each assignment separately.
+    // We'll make this operation atomic when we add transaction support.
     for (const permissionKey of uniqueKeys) {
       await this.rolePermissionRepository.assign(
         roleId,
@@ -49,11 +50,10 @@ export class RolePermissionService {
     roleId: string,
     permissionKey: PermissionKey,
   ): Promise<void> {
+    // Validate the role and permission before removing the assignment.
     await this.roleService.getRoleById(roleId);
 
-    await this.permissionService.getPermissionByKey(
-      permissionKey,
-    );
+    await this.permissionService.getPermissionByKey(permissionKey);
 
     await this.rolePermissionRepository.remove(
       roleId,
@@ -64,9 +64,11 @@ export class RolePermissionService {
   async getPermissionsByRole(
     roleId: string,
   ): Promise<PermissionKey[]> {
+    // Avoid returning an empty list for a role that doesn't exist.
     await this.roleService.getRoleById(roleId);
 
-    return this.rolePermissionRepository
-      .findPermissionKeysByRoleId(roleId);
+    return this.rolePermissionRepository.findPermissionKeysByRoleId(
+      roleId,
+    );
   }
 }
