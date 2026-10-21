@@ -55,6 +55,101 @@ async function main() {
 
     console.log("PASS create test organization and role");
 
+    //34. test para transactional support asignacion fallida de varios permissions
+    // 2. Verify assignMany() is atomic when an insert fails.
+    const triggerName = `test_fail_permission_${suffix}`;
+    const functionName = `test_fail_permission_fn_${suffix}`;
+
+    // Fail when the second permission is inserted.
+    const failingKey = PERMISSION_KEYS.ROLES_READ.replace(/'/g, "''");
+
+    await database.query(
+      `
+        CREATE FUNCTION ${functionName}()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          permission_key TEXT;
+        BEGIN
+          SELECT key INTO permission_key
+          FROM permissions
+          WHERE id = NEW.permission_id;
+
+          IF permission_key = '${failingKey}' THEN
+            RAISE EXCEPTION 'Simulated permission assignment failure';
+          END IF;
+
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql
+      `,
+    );
+
+    await database.query(
+      `
+        CREATE TRIGGER ${triggerName}
+        BEFORE INSERT ON role_permissions
+        FOR EACH ROW
+        EXECUTE FUNCTION ${functionName}()
+      `,
+    );
+
+    try {
+      await assert.rejects(
+        rolePermissionRepository.assignMany(role.id, [
+          PERMISSION_KEYS.USERS_READ,
+          PERMISSION_KEYS.ROLES_READ,
+        ]),
+        {
+          name: "DatabaseError",
+          message: "Database operation failed",
+        },
+      );
+
+      const assignedAfterFailure =
+        await rolePermissionRepository.findPermissionKeysByRoleId(role.id);
+
+      assert.deepEqual(assignedAfterFailure, []);
+
+      console.log("PASS assignMany rolls back all assignments on failure");
+    } finally {
+      await database.query(
+        `DROP TRIGGER IF EXISTS ${triggerName} ON role_permissions`,
+      );
+
+      await database.query(
+        `DROP FUNCTION IF EXISTS ${functionName}()`,
+      );
+    }
+
+    // ¿Qué sucede aquí?
+    // Primera inserción
+
+    // USERS_READ se intenta insertar dentro de la transacción.
+
+    // Segunda inserción
+    // El trigger provoca un error al llegar a ROLES_READ.
+
+    // Rollback
+    // La transacción revierte la primera inserción y la consulta final devuelve una lista vacía.
+
+    //34. end
+
+
+    await rolePermissionRepository.assignMany(role.id, [
+      PERMISSION_KEYS.USERS_READ,
+      PERMISSION_KEYS.ROLES_READ,
+    ]);
+
+    assert.deepEqual(
+      await rolePermissionRepository.findPermissionKeysByRoleId(role.id),
+      [
+        PERMISSION_KEYS.ROLES_READ,
+        PERMISSION_KEYS.USERS_READ,
+      ],
+    );
+
+    console.log("PASS assignMany assigns multiple permissions");
+
     // 2. Assign two existing catalog permissions.
     await rolePermissionRepository.assign(
       role.id,

@@ -10,6 +10,12 @@ export interface RolePermissionRepository {
     permissionKey: PermissionKey,
   ): Promise<void>;
 
+  //34. se agrego esta function para manejar transaction support
+  assignMany(
+    roleId: string,
+    permissionKeys: PermissionKey[],
+  ): Promise<void>;
+
   remove(
     roleId: string,
     permissionKey: PermissionKey,

@@ -17,14 +17,16 @@ export class RolePermissionService {
     private readonly rolePermissionRepository: RolePermissionRepository,
   ) {}
 
+ 
+  //34. esta es la function que se encargar de asignar permissions y ya cuenta con transaction support
   async assignPermissions(
     roleId: string,
     permissionKeys: PermissionKey[],
   ): Promise<void> {
-    // Validate the role before changing its permissions.
+    // 1. Validate the role before changing its permissions.
     await this.roleService.getRoleById(roleId);
 
-    // Remove duplicate keys while preserving their order.
+    // 2. Remove duplicate keys while preserving their order.
     const uniqueKeys = [...new Set(permissionKeys)];
 
     if (uniqueKeys.length === 0) {
@@ -33,17 +35,14 @@ export class RolePermissionService {
       );
     }
 
-    // Validate all requested permissions before writing anything.
+    // 3. Validate all requested permissions before writing anything.
     await this.permissionService.getPermissionsByKeys(uniqueKeys);
 
-    // The repository currently performs each assignment separately.
-    // We'll make this operation atomic when we add transaction support.
-    for (const permissionKey of uniqueKeys) {
-      await this.rolePermissionRepository.assign(
-        roleId,
-        permissionKey,
-      );
-    }
+    // 4. Delegate the batch write to the repository.
+    await this.rolePermissionRepository.assignMany(
+      roleId,
+      uniqueKeys,
+    );
   }
 
   async removePermission(
