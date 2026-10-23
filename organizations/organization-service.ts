@@ -15,14 +15,19 @@ import {
   ConflictError,
 } from "../errors";
 
+//37. se inporta el modulo de transaction para transaction support para organization+rolowner+permissions+membresia
+import type { DatabaseTransaction } from "../database/transactional-database";
+
 export class OrganizationService {
   constructor(
     private readonly organizationRepository: OrganizationRepository,
   ) {}
 
-  async createOrganization(
-    input: CreateOrganizationInput,
-  ): Promise<Organization> {
+  // 37. se agrega DatabaseTransaction para manejar transactio support
+ async createOrganization(
+  input: CreateOrganizationInput,
+  transaction?: DatabaseTransaction,
+): Promise<Organization> {
     const name = input.name?.trim();
     const slug = input.slug?.trim().toLowerCase();
 
@@ -46,10 +51,14 @@ export class OrganizationService {
       throw new ConflictError("Organization slug already exists");
     }
 
-    return this.organizationRepository.create({
-      name,
-      slug,
-    });
+    // 37. se agrega transaction para manejar transactio support
+    return this.organizationRepository.create(
+      {
+        name,
+        slug,
+      },
+      transaction,
+    );
   }
 
   async getOrganizationById(id: string): Promise<Organization> {

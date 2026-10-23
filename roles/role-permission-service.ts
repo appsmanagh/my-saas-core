@@ -10,6 +10,9 @@ import type { RolePermissionRepository } from "./role-permission-repository";
 import type { RoleService } from "./role-service";
 import { ValidationError } from "../errors";
 
+//37. se inporta el modulo de transaction para transaction support para organization+rolowner+permissions+membresia
+import type { DatabaseTransaction } from "../database/transactional-database";
+
 export class RolePermissionService {
   constructor(
     private readonly roleService: RoleService,
@@ -19,14 +22,20 @@ export class RolePermissionService {
 
  
   //34. esta es la function que se encargar de asignar permissions y ya cuenta con transaction support
+  // 37. se agrega DatabaseTransaction para manejar transactio support
   async assignPermissions(
     roleId: string,
     permissionKeys: PermissionKey[],
+    transaction?: DatabaseTransaction,
   ): Promise<void> {
-    // 1. Validate the role before changing its permissions.
-    await this.roleService.getRoleById(roleId);
+    // Si no hay una transacción externa, validamos el rol normalmente.
+    // Si sí la hay, el rol podría haberse creado dentro de esa
+    // transacción y aún no ser visible desde una consulta independiente.
+    if (!transaction) {
+      await this.roleService.getRoleById(roleId);
+    }
 
-    // 2. Remove duplicate keys while preserving their order.
+    // Eliminar duplicados preservando el orden.
     const uniqueKeys = [...new Set(permissionKeys)];
 
     if (uniqueKeys.length === 0) {
@@ -35,13 +44,14 @@ export class RolePermissionService {
       );
     }
 
-    // 3. Validate all requested permissions before writing anything.
+    // Validar que todas las claves existan en el catálogo.
     await this.permissionService.getPermissionsByKeys(uniqueKeys);
 
-    // 4. Delegate the batch write to the repository.
+    // Usar la transacción compartida, si se proporcionó.
     await this.rolePermissionRepository.assignMany(
       roleId,
       uniqueKeys,
+      transaction,
     );
   }
 

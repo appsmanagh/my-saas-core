@@ -24,12 +24,19 @@ import {
   ConflictError,
 } from "../errors";
 
+
+//37. se inporta el modulo de transaction para transaction support para organization+rolowner+permissions+membresia
+import type { DatabaseTransaction } from "../database/transactional-database";
+
 export class RoleService {
   constructor(
     private readonly roleRepository: RoleRepository,
   ) {}
-
-  async createRole(input: CreateRoleInput): Promise<Role> {
+  // 37. se agrega DatabaseTransaction para manejar transactio support
+  async createRole(
+    input: CreateRoleInput,
+    transaction?: DatabaseTransaction,
+  ): Promise<Role> {
     const organizationId = input.organizationId.trim();
     const name = input.name.trim();
     const description = input.description?.trim() || null;
@@ -55,12 +62,15 @@ export class RoleService {
         "A role with this name already exists in this organization",
       );
     }
-
-    return this.roleRepository.create({
+    // 37. se agrega transaction para manejar transactio support
+   return this.roleRepository.create(
+    {
       organizationId,
       name,
       description,
-    });
+    },
+    transaction,
+  );
   }
 
   async getRoleById(id: string): Promise<Role> {
