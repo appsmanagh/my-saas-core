@@ -1,6 +1,7 @@
-
-import type { TransactionalDatabase } from "../../database/transactional-database";
-import type { DatabaseTransaction } from "../../database/transactional-database";
+import type {
+  TransactionalDatabase,
+  DatabaseTransaction,
+} from "../../database/transactional-database";
 
 import type {
   OrganizationMember,
@@ -25,28 +26,38 @@ export class PostgresOrganizationMemberRepository
     private readonly database: TransactionalDatabase,
   ) {}
 
-  async create(
+//36. se agrego transaction?: DatabaseTransaction, a esta funcion para transaction support organization+rolowner+permissions+membresia
+async create(
     input: CreateOrganizationMemberInput,
+    transaction?: DatabaseTransaction,
   ): Promise<OrganizationMember> {
+    const sql = `
+      INSERT INTO organization_members (
+        user_id,
+        organization_id,
+        role_id
+      )
+      VALUES ($1, $2, $3)
+      RETURNING user_id, organization_id, role_id, created_at
+    `;
+
+    const values = [
+      input.userId,
+      input.organizationId,
+      input.roleId,
+    ];
+
     try {
-      const rows = await this.database.query<OrganizationMemberRow>(
-        `
-          INSERT INTO organization_members (
-            user_id,
-            organization_id,
-            role_id
-          )
-          VALUES ($1, $2, $3)
-          RETURNING user_id, organization_id, role_id, created_at
-        `,
-        [input.userId, input.organizationId, input.roleId],
-      );
+      const rows = transaction
+        ? await transaction.query<OrganizationMemberRow>(sql, values)
+        : await this.database.query<OrganizationMemberRow>(sql, values);
 
       return this.toOrganizationMember(rows[0]);
     } catch (error) {
       translatePostgresError(error);
     }
   }
+
 
   async findByUserAndOrganization(
     userId: string,
@@ -133,3 +144,4 @@ export class PostgresOrganizationMemberRepository
     };
   }
 }
+ 

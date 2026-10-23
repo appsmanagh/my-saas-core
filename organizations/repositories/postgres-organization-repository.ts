@@ -2,6 +2,8 @@
 import { randomUUID } from "node:crypto";
 
 import type { Database } from "../../database/database";
+//36. se agrega de modulo de transaction support
+import type { DatabaseTransaction } from "../../database/transactional-database";
 import type { OrganizationRepository } from "../organization-repository";
 import type {
   Organization,
@@ -24,18 +26,29 @@ export class PostgresOrganizationRepository
 {
   constructor(private readonly database: Database) {}
 
-  async create(input: CreateOrganizationInput): Promise<Organization> {
+  //36. ¿Por qué así?
+  // - Si llamas create(input), usa el Database del repositorio como antes.
+  // - Si llamas create(input, transaction), la inserción usa la transacción que le pasó el servicio coordinador.
+  // - El SQL y la traducción de errores se mantienen en un solo lugar.
+  
+  async create(
+    input: CreateOrganizationInput,
+    transaction?: DatabaseTransaction,
+  ): Promise<Organization> {
     const id = randomUUID();
 
+    const sql = `
+      INSERT INTO organizations (id, name, slug)
+      VALUES ($1, $2, $3)
+      RETURNING id, name, slug, created_at, updated_at
+    `;
+
+    const values = [id, input.name, input.slug];
+
     try {
-      const rows = await this.database.query<OrganizationRow>(
-        `
-          INSERT INTO organizations (id, name, slug)
-          VALUES ($1, $2, $3)
-          RETURNING id, name, slug, created_at, updated_at
-        `,
-        [id, input.name, input.slug],
-      );
+      const rows = transaction
+        ? await transaction.query<OrganizationRow>(sql, values)
+        : await this.database.query<OrganizationRow>(sql, values);
 
       return this.toOrganization(rows[0]);
     } catch (error) {

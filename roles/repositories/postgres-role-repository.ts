@@ -1,5 +1,10 @@
 
+
+
 import type { Database } from "../../database/database";
+//36. se agrega de modulo de transaction support
+import type { DatabaseTransaction } from "../../database/transactional-database";
+
 import type { RoleRepository } from "../role-repository";
 import type {
   Role,
@@ -21,39 +26,49 @@ interface RoleRow {
 export class PostgresRoleRepository implements RoleRepository {
   constructor(private readonly database: Database) {}
 
-  async create(input: CreateRoleInput): Promise<Role> {
+  //36. ¿Por qué así?
+  // - Si llamas create(input), usa el Database del repositorio como antes.
+  // - Si llamas create(input, transaction), la inserción usa la transacción que le pasó el servicio coordinador.
+  // - El SQL y la traducción de errores se mantienen en un solo lugar.
+ async create(
+    input: CreateRoleInput,
+    transaction?: DatabaseTransaction,
+  ): Promise<Role> {
     const id = crypto.randomUUID();
     const now = new Date();
 
+    const sql = `
+      INSERT INTO roles (
+        id,
+        organization_id,
+        name,
+        description,
+        created_at,
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING
+        id,
+        organization_id,
+        name,
+        description,
+        created_at,
+        updated_at
+    `;
+
+    const values = [
+      id,
+      input.organizationId,
+      input.name,
+      input.description ?? null,
+      now,
+      now,
+    ];
+
     try {
-      const rows = await this.database.query<RoleRow>(
-        `
-          INSERT INTO roles (
-            id,
-            organization_id,
-            name,
-            description,
-            created_at,
-            updated_at
-          )
-          VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING
-            id,
-            organization_id,
-            name,
-            description,
-            created_at,
-            updated_at
-        `,
-        [
-          id,
-          input.organizationId,
-          input.name,
-          input.description ?? null,
-          now,
-          now,
-        ],
-      );
+      const rows = transaction
+        ? await transaction.query<RoleRow>(sql, values)
+        : await this.database.query<RoleRow>(sql, values);
 
       return this.toRole(rows[0]);
     } catch (error) {

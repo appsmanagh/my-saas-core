@@ -6,15 +6,19 @@
 // updateRole	Cambiar el rol de un miembro.
 // delete	Retirar la membresía.
 
-
 import type {
   OrganizationMember,
   CreateOrganizationMemberInput,
 } from "./organization-member";
 
+import type { DatabaseTransaction } from "../database/transactional-database";
+
 export interface OrganizationMemberRepository {
+
+  //36. se agrego transaction?: DatabaseTransaction, a esta funcion para transaction support organization+rolowner+permissions+membresia
   create(
     input: CreateOrganizationMemberInput,
+    transaction?: DatabaseTransaction,
   ): Promise<OrganizationMember>;
 
   findByUserAndOrganization(
@@ -37,3 +41,5 @@ export interface OrganizationMemberRepository {
     organizationId: string,
   ): Promise<void>;
 }
+
+ 

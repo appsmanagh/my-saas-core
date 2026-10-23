@@ -8,8 +8,19 @@ import type {
   UpdateOrganizationInput,
 } from "./organization";
 
+import type { DatabaseTransaction } from "../database/transactional-database";
+
 export interface OrganizationRepository {
-  create(input: CreateOrganizationInput): Promise<Organization>;
+  //36. ¿Qué cambia?
+  // Antes, create(input) solo podía insertar usando la conexión del repositorio. Ahora puede recibir una transacción:
+  // await organizationRepository.create(input, transaction);
+  // Y las llamadas existentes siguen siendo válidas:
+  // await organizationRepository.create(input);
+  
+  create(
+    input: CreateOrganizationInput,
+    transaction?: DatabaseTransaction,
+  ): Promise<Organization>;
 
   findById(id: string): Promise<Organization | null>;
 

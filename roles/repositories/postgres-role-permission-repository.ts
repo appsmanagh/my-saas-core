@@ -9,6 +9,7 @@
 //34. por el import de TransactionalDatabase
 import type {
   TransactionalDatabase,
+  DatabaseTransaction,
 } from "../../database/transactional-database";
 
 import type { RolePermissionRepository } from "../role-permission-repository";
@@ -32,28 +33,96 @@ interface PermissionKeyRow {
 export class PostgresRolePermissionRepository
   implements RolePermissionRepository
 {
-  constructor(private readonly database: TransactionalDatabase,) {}
-
-  async assign(roleId: string, permissionKey: PermissionKey): Promise<void> {
-    // Resolve the catalog key to its database ID.
-    const permissionRows = await this.database.query<PermissionIdRow>(
-      `
-        SELECT id
-        FROM permissions
-        WHERE key = $1
-      `,
-      [permissionKey],
-    );
-
-    if (permissionRows.length === 0) {
-      throw new NotFoundError("Permission not found");
+  constructor(
+    private readonly database: TransactionalDatabase,
+  ) {}
+   //36. se agrego transaction?: DatabaseTransaction, a esta funcion para transaction support organization+rolowner+permissions+membresia
+  async assign(
+    roleId: string,
+    permissionKey: PermissionKey,
+    transaction?: DatabaseTransaction,
+  ): Promise<void> {
+    await this.assignMany(roleId, [permissionKey], transaction);
+  }
+   //36. se agrego transaction?: DatabaseTransaction, a esta funcion para transaction support organization+rolowner+permissions+membresia
+  //36.  ¿Qué conseguimos?
+  // - Transacción externa: si pasas transaction, las consultas utilizan esa transacción sin abrir otra.
+  // - Llamada independiente: si no pasas una, assignMany() abre su propia transacción como antes.
+  // - Asignación individual: assign() reutiliza la lógica de assignMany(), evitando duplicación.
+  // - Permisos inexistentes: se detectan antes de insertar asignaciones.
+  // - Duplicados: se mantienen idempotentes gracias a ON CONFLICT DO NOTHING.
+  // Un detalle importante: cuando se proporciona una transacción externa, el servicio que la abrió es responsable de hacer COMMIT o ROLLBACK. El repositorio no debe finalizarla por su cuenta.
+  async assignMany(
+    roleId: string,
+    permissionKeys: PermissionKey[],
+    transaction?: DatabaseTransaction,
+  ): Promise<void> {
+    if (permissionKeys.length === 0) {
+      return;
     }
 
-    const permissionId = permissionRows[0].id;
-
     try {
-      // Idempotent: assigning an already assigned permission is a no-op.
-      await this.database.query<AssignedRoleRow>(
+      if (transaction) {
+        await this.assignManyInTransaction(
+          transaction,
+          roleId,
+          permissionKeys,
+        );
+        return;
+      }
+
+      await this.database.transaction(async (tx) => {
+        await this.assignManyInTransaction(
+          tx,
+          roleId,
+          permissionKeys,
+        );
+      });
+    } catch (error) {
+      translatePostgresError(error);
+    }
+  }
+
+  private async assignManyInTransaction(
+    transaction: DatabaseTransaction,
+    roleId: string,
+    permissionKeys: PermissionKey[],
+  ): Promise<void> {
+    // 1. Resolve all permission keys to database IDs.
+    const permissionRows = await transaction.query<{
+      id: string;
+      key: PermissionKey;
+    }>(
+      `
+        SELECT id, key
+        FROM permissions
+        WHERE key = ANY($1)
+      `,
+      [permissionKeys],
+    );
+
+    // 2. Ensure every requested permission exists.
+    const permissionIds = new Map(
+      permissionRows.map((row) => [row.key, row.id]),
+    );
+
+    const missingKeys = [
+      ...new Set(permissionKeys.filter(
+        (key) => !permissionIds.has(key),
+      )),
+    ];
+
+    if (missingKeys.length > 0) {
+      throw new NotFoundError(
+        `Permission not found: ${missingKeys.join(", ")}`,
+      );
+    }
+
+    // 3. Insert all assignments using the same transaction.
+    for (const permissionKey of new Set(permissionKeys)) {
+      const permissionId = permissionIds.get(permissionKey)!;
+
+      await transaction.query<AssignedRoleRow>(
         `
           INSERT INTO role_permissions (role_id, permission_id)
           VALUES ($1, $2)
@@ -62,66 +131,13 @@ export class PostgresRolePermissionRepository
         `,
         [roleId, permissionId],
       );
-    } catch (error) {
-      translatePostgresError(error);
     }
   }
 
-  //34. se agrega esta function assigmany para transactional support
-  async assignMany(
+  async remove(
     roleId: string,
-    permissionKeys: PermissionKey[],
+    permissionKey: PermissionKey,
   ): Promise<void> {
-    try {
-      await this.database.transaction(async (transaction) => {
-        // 1. Resolve all permission keys to database IDs.
-        const permissionRows = await transaction.query<{
-          id: string;
-          key: PermissionKey;
-        }>(
-          `
-            SELECT id, key
-            FROM permissions
-            WHERE key = ANY($1)
-          `,
-          [permissionKeys],
-        );
-
-        // 2. Ensure every requested permission exists.
-        const permissionIds = new Map(
-          permissionRows.map((row) => [row.key, row.id]),
-        );
-
-        const missingKeys = permissionKeys.filter(
-          (key) => !permissionIds.has(key),
-        );
-
-        if (missingKeys.length > 0) {
-          throw new NotFoundError(
-            `Permission not found: ${missingKeys.join(", ")}`,
-          );
-        }
-
-        // 3. Insert every assignment using the same transaction.
-        for (const permissionKey of permissionKeys) {
-          const permissionId = permissionIds.get(permissionKey)!;
-
-          await transaction.query(
-            `
-              INSERT INTO role_permissions (role_id, permission_id)
-              VALUES ($1, $2)
-              ON CONFLICT (role_id, permission_id) DO NOTHING
-            `,
-            [roleId, permissionId],
-          );
-        }
-      });
-    } catch (error) {
-      translatePostgresError(error);
-    }
-  }
-
-  async remove(roleId: string, permissionKey: PermissionKey): Promise<void> {
     const permissionRows = await this.database.query<PermissionIdRow>(
       `
         SELECT id
@@ -157,7 +173,7 @@ export class PostgresRolePermissionRepository
         WHERE role_permissions.role_id = $1
         ORDER BY permissions.key ASC
       `,
-      [roleId],
+    [roleId],
     );
 
     return rows.map((row) => row.key);
