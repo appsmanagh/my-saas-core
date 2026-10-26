@@ -96,6 +96,17 @@ export class OrganizationService {
     return this.organizationRepository.findAll();
   }
 
+  //40. se agrega este metodo para llamar a las organization del usuario logueado
+  async findOrganizationsByUserId(
+    userId: string,
+  ): Promise<Organization[]> {
+    if (!userId?.trim()) {
+      throw new ValidationError("User ID is required");
+    }
+
+    return this.organizationRepository.findByUserId(userId);
+  }
+
   async updateOrganization(
     id: string,
     input: UpdateOrganizationInput,

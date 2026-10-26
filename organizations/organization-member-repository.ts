@@ -26,6 +26,11 @@ export interface OrganizationMemberRepository {
     organizationId: string,
   ): Promise<OrganizationMember | null>;
 
+//40. se agrega este metodo para llamar a las organization del usuario logueado
+  findByUser(
+    userId: string,
+  ): Promise<OrganizationMember[]>;
+
   findByOrganization(
     organizationId: string,
   ): Promise<OrganizationMember[]>;

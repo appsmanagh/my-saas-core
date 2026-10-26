@@ -216,9 +216,14 @@ const onboardingService =
   );
 
   //39. aqui se llama la nueva ruta de organizations
+  //40. se se envia organizationService tambien a createOrganizationRoutes
   app.use(
     "/api/organizations",
-    createOrganizationRoutes(onboardingService, requireAuth),
+    createOrganizationRoutes(
+      organizationService,
+      onboardingService,
+      requireAuth,
+    ),
   );
 
   app.use(

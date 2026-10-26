@@ -27,6 +27,9 @@ export interface OrganizationRepository {
   findBySlug(slug: string): Promise<Organization | null>;
 
   findAll(): Promise<Organization[]>;
+  
+  //40. se agrega este metodo para llamar a las organization del usuario logueado
+  findByUserId(userId: string): Promise<Organization[]>;
 
   update(
     id: string,

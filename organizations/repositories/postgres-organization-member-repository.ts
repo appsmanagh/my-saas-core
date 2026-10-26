@@ -78,6 +78,23 @@ async create(
       : null;
   }
 
+  //40. se agrega este metodo para llamar a las organization del usuario logueado
+  async findByUser(
+    userId: string,
+  ): Promise<OrganizationMember[]> {
+    const rows = await this.database.query<OrganizationMemberRow>(
+      `
+        SELECT user_id, organization_id, role_id, created_at
+        FROM organization_members
+        WHERE user_id = $1
+        ORDER BY created_at ASC
+      `,
+      [userId],
+    );
+
+    return rows.map((row) => this.toOrganizationMember(row));
+  }
+
   async findByOrganization(
     organizationId: string,
   ): Promise<OrganizationMember[]> {

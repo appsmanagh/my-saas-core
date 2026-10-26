@@ -94,6 +94,36 @@ export class PostgresOrganizationRepository
     return rows.map((row) => this.toOrganization(row));
   }
 
+  //40. se agrega este metodo para llamar a las organization del usuario logueado
+  async findByUserId(userId: string): Promise<Organization[]> {
+    const rows = await this.database.query<OrganizationRow>(
+      `
+        SELECT
+          o.id,
+          o.name,
+          o.slug,
+          o.created_at,
+          o.updated_at
+        FROM organizations AS o
+        INNER JOIN organization_members AS om
+          ON om.organization_id = o.id
+        WHERE om.user_id = $1
+        ORDER BY o.name ASC
+      `,
+      [userId],
+    );
+
+    return rows.map((row) => this.toOrganization(row));
+  }
+
+  // ¿Qué hace esta consulta?
+  // - INNER JOIN: devuelve organizaciones donde existe una membresía.
+  // - WHERE om.user_id = $1: limita los resultados al usuario indicado.
+  // - [userId]: utiliza parámetros SQL, evitando concatenar el ID directamente en la consulta.
+  // - ORDER BY o.name ASC: devuelve los resultados ordenados por nombre.
+
+  //40. end---
+
   async update(
     id: string,
     input: UpdateOrganizationInput,
