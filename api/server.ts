@@ -40,6 +40,28 @@ import {
   LoginRateLimit,
 } from "../security/login-rate-limit";
 
+
+//39. estos son los nuevos modulos importados para transactions support 
+
+import type { Database } from "../database/database";
+import type { TransactionalDatabase } from "../database/transactional-database";
+
+import { PostgresOrganizationRepository } from "../organizations/repositories/postgres-organization-repository";
+import { PostgresOrganizationMemberRepository } from "../organizations/repositories/postgres-organization-member-repository";
+import { OrganizationService } from "../organizations/organization-service";
+import { CreateOrganizationWithOwnerService } from "../organizations/create-organization-with-owner-service";
+
+import { PostgresRoleRepository } from "../roles/repositories/postgres-role-repository";
+import { PostgresRolePermissionRepository } from "../roles/repositories/postgres-role-permission-repository";
+import { RoleService } from "../roles/role-service";
+import { RolePermissionService } from "../roles/role-permission-service";
+
+import { PostgresPermissionRepository } from "../permissions/repositories/postgres-permission-repository";
+import { PermissionService } from "../permissions/permission-service";
+
+import { createOrganizationRoutes } from "./routes/organization-routes";
+//39. end----
+
 const app = express();
 
 app.use(express.json());
@@ -47,10 +69,79 @@ app.use(express.json());
 // 19. Express necesita un pequeño middleware adicional para manejar cookies correctamente.
 app.use(cookieParser());
 
+//39.Esta function comprueba la capacidad real del adaptador durante la ejecución. No basta con que TypeScript permita una conversión de tipos.
+
+
+function supportsTransactions(
+  database: Database,
+): database is Database & TransactionalDatabase {
+  return (
+    typeof (
+      database as Partial<TransactionalDatabase>
+    ).transaction === "function"
+  );
+}
+//39. end----
+
 async function bootstrap() {
   const database = createDatabase();
 
   await database.connect();
+
+ //39. aqui se usan los mudulos importados arriba
+
+if (!supportsTransactions(database)) {
+  await database.disconnect();
+
+  throw new Error(
+    "Organization onboarding requires a transactional database provider.",
+  );
+}
+
+const transactionalDatabase = database;
+
+const organizationRepository =
+  new PostgresOrganizationRepository(database);
+
+const organizationService =
+  new OrganizationService(organizationRepository);
+
+const roleRepository =
+  new PostgresRoleRepository(database);
+
+const roleService =
+  new RoleService(roleRepository);
+
+const permissionRepository =
+  new PostgresPermissionRepository(database);
+
+const permissionService =
+  new PermissionService(permissionRepository);
+
+const rolePermissionRepository =
+  new PostgresRolePermissionRepository(transactionalDatabase);
+
+const rolePermissionService =
+  new RolePermissionService(
+    roleService,
+    permissionService,
+    rolePermissionRepository,
+  );
+
+const organizationMemberRepository =
+  new PostgresOrganizationMemberRepository(
+    transactionalDatabase,
+  );
+
+const onboardingService =
+  new CreateOrganizationWithOwnerService(
+    transactionalDatabase,
+    organizationService,
+    roleService,
+    rolePermissionService,
+    organizationMemberRepository,
+  );
+//39 end---
 
   const userRepository =
     new PostgresUserRepository(database);
@@ -122,6 +213,12 @@ async function bootstrap() {
       userService,
       requireAuth,
     ),
+  );
+
+  //39. aqui se llama la nueva ruta de organizations
+  app.use(
+    "/api/organizations",
+    createOrganizationRoutes(onboardingService, requireAuth),
   );
 
   app.use(
