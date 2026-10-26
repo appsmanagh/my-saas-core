@@ -1,16 +1,13 @@
 //9. este es el script que se encraga de actaulizar las migrations 
 // crear tables, apdate columns etc
 
+
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { createDatabase } from "./database-provider";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-async function migrate() {
+async function migrate(): Promise<void> {
   const database = createDatabase();
 
   await database.connect();
@@ -23,8 +20,10 @@ async function migrate() {
       )
     `);
 
+    // Se asume que el comando se ejecuta desde la raíz del proyecto.
     const migrationsDirectory = path.join(
-      __dirname,
+      process.cwd(),
+      "database",
       "migrations",
     );
 
@@ -33,7 +32,7 @@ async function migrate() {
       .sort();
 
     for (const file of files) {
-      const version = file.replace(".sql", "");
+      const version = file.replace(/\.sql$/, "");
 
       const applied = await database.query<{ version: string }>(
         `
@@ -68,12 +67,14 @@ async function migrate() {
 
       console.log(`Applied ${file}`);
     }
+
+    console.log("Migrations completed successfully.");
   } finally {
     await database.disconnect();
   }
 }
 
-migrate().catch((error) => {
+migrate().catch((error: unknown) => {
   console.error("Migration failed:", error);
-  process.exit(1);
+  process.exitCode = 1;
 });

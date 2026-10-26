@@ -15,14 +15,16 @@
 
 // Entonces necesitamos un traductor:
 
+
+import type { ErrorRequestHandler } from "express";
 import { AppError } from "../../errors";
 
-export function errorMiddleware(
-  error: unknown,
-  request: Request,
-  response: Response,
-  next: NextFunction,
-) {
+export const errorMiddleware: ErrorRequestHandler = (
+  error,
+  _request,
+  response,
+  _next,
+) => {
   if (
     error instanceof SyntaxError &&
     "status" in error &&
@@ -59,4 +61,4 @@ export function errorMiddleware(
       code: "INTERNAL_ERROR",
     },
   });
-}
+};
