@@ -1,4 +1,4 @@
-// ete files es el repository de auth 
+// este files es el repository de auth 
 
 import type { Database } from "../../database/database";
 import type { AuthRepository } from "../auth-repository";
@@ -33,11 +33,13 @@ export class PostgresAuthRepository implements AuthRepository {
         [userId],
       );
 
-    if (rows.length === 0) {
+    const row = rows[0];
+
+    if (!row) {
       return null;
     }
 
-    return this.toCredentials(rows[0]);
+    return this.toCredentials(row);
   }
 
   async create(
@@ -67,7 +69,15 @@ export class PostgresAuthRepository implements AuthRepository {
         ],
       );
 
-    return this.toCredentials(rows[0]);
+    const row = rows[0];
+
+    if (!row) {
+      throw new Error(
+        "Creating auth credentials returned no row",
+      );
+    }
+
+    return this.toCredentials(row);
   }
 
   async update(
@@ -94,11 +104,14 @@ export class PostgresAuthRepository implements AuthRepository {
         ],
       );
 
-    if (rows.length === 0) {
+    const row = rows[0];
+
+    if (!row) {
       return null;
     }
 
-    return this.toCredentials(rows[0]);
+    return this.toCredentials(row);
+
   }
 
   async deleteByUserId(userId: string): Promise<void> {

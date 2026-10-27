@@ -35,11 +35,13 @@ export class PostgresSessionRepository
       [tokenHash],
     );
 
-    if (rows.length === 0) {
+    const row = rows[0];
+
+    if (!row) {
       return null;
     }
 
-    return this.toSession(rows[0]);
+    return this.toSession(row);
   }
 
   async create(
@@ -71,7 +73,15 @@ export class PostgresSessionRepository
       ],
     );
 
-    return this.toSession(rows[0]);
+    const row = rows[0];
+
+    if (!row) {
+      throw new Error(
+        "Creating session returned no row",
+      );
+    }
+
+    return this.toSession(row);
   }
 
   async delete(sessionId: string): Promise<void> {

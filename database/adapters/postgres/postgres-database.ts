@@ -46,8 +46,8 @@ export class PostgresDatabase implements Database, TransactionalDatabase {
     text: string,
     values: unknown[] = [],
   ): Promise<T[]> {
-    const result = await this.pool.query<T>(text, values);
-    return result.rows;
+    const result = await this.pool.query(text, values);
+    return result.rows as T[];
   }
 
   //33. se agrega esta function para transactional support
@@ -74,12 +74,13 @@ export class PostgresDatabase implements Database, TransactionalDatabase {
       await client.query("BEGIN");
 
       const transaction: DatabaseTransaction = {
+
         query: async <Row>(
           text: string,
           values: unknown[] = [],
         ): Promise<Row[]> => {
-          const result = await client.query<Row>(text, values);
-          return result.rows;
+          const result = await client.query(text, values);
+          return result.rows as Row[];
         },
       };
 

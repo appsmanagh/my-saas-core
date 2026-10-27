@@ -7,9 +7,9 @@ import type {
   Organization,
   CreateOrganizationInput,
   UpdateOrganizationInput,
-} from "./organization";
+} from "../organization";
 
-import type { OrganizationRepository } from "./organization-repository";
+import type { OrganizationRepository } from "../organization-repository";
 
 export class InMemoryOrganizationRepository
   implements OrganizationRepository
