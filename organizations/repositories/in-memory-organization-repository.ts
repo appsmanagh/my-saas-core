@@ -10,10 +10,14 @@ import type {
 } from "../organization";
 
 import type { OrganizationRepository } from "../organization-repository";
+import type { OrganizationMemberRepository } from "../organization-member-repository";
 
 export class InMemoryOrganizationRepository
   implements OrganizationRepository
 {
+  constructor(
+    private readonly organizationMemberRepository: OrganizationMemberRepository,
+  ) {}
   private readonly organizations = new Map<string, Organization>();
 
   async create(input: CreateOrganizationInput): Promise<Organization> {
@@ -34,6 +38,23 @@ export class InMemoryOrganizationRepository
 
   async findById(id: string): Promise<Organization | null> {
     return this.organizations.get(id) ?? null;
+  }
+
+  async findByUserId(userId: string): Promise<Organization[]> {
+    const memberships =
+      await this.organizationMemberRepository.findByUser(userId);
+
+    const organizations: Organization[] = [];
+
+    for (const membership of memberships) {
+      const organization = this.organizations.get(membership.organizationId);
+
+      if (organization) {
+        organizations.push(organization);
+      }
+    }
+
+    return organizations;
   }
 
   async findBySlug(slug: string): Promise<Organization | null> {

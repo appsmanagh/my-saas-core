@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import { OrganizationService } from "../../organizations/organization-service";
 import { InMemoryOrganizationRepository } from "../../organizations/repositories/in-memory-organization-repository";
+import { InMemoryOrganizationMemberRepository } from
+  "../../organizations/repositories/in-memory-organization-member-repository";
 
 async function expectError(
   operation: () => Promise<unknown>,
@@ -25,8 +27,14 @@ async function expectError(
 }
 
 async function main() {
-  const repository = new InMemoryOrganizationRepository();
-  const service = new OrganizationService(repository);
+  const organizationMemberRepository =
+    new InMemoryOrganizationMemberRepository();
+
+  const organizationRepository =
+    new InMemoryOrganizationRepository(
+      organizationMemberRepository,
+    );
+  const service = new OrganizationService(organizationRepository);
 
   // 1. Create organization and normalize values
   const organization = await service.createOrganization({
