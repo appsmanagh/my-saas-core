@@ -7,14 +7,13 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 
-import { createDatabase } from "../../database/database-provider";
-
 import { PostgresOrganizationRepository } from "../../organizations/repositories/postgres-organization-repository";
 import { PostgresOrganizationMemberRepository } from "../../organizations/repositories/postgres-organization-member-repository";
 import { PostgresRoleRepository } from "../../roles/repositories/postgres-role-repository";
+import { PostgresDatabase } from "../../database/adapters/postgres/postgres-database";
 
 async function main() {
-  const database = createDatabase();
+  const database = new PostgresDatabase();
   await database.connect();
 
   let userId: string | undefined;
@@ -192,7 +191,9 @@ async function main() {
     );
 
     assert.equal(members.length, 1);
-    assert.equal(members[0].userId, userId);
+    const firstMember = members[0];
+    assert.ok(firstMember);
+    assert.equal(firstMember.userId, userId);
 
     console.log("PASS list organization members");
 

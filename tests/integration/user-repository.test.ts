@@ -1,7 +1,7 @@
 //4. Y con este file se prueban las function de repository
 
-import { InMemoryUserRepository } from "../users/repositories/in-memory-user-repository";
-import type { User } from "../users/user";
+import { InMemoryUserRepository } from "../../users/repositories/in-memory-user-repository";
+import type { User } from "../../users/user";
 
 async function main() {
   const repository = new InMemoryUserRepository();
@@ -10,6 +10,7 @@ async function main() {
     id: "user-1",
     email: "test@example.com",
     name: "Test User",
+    status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),
   };

@@ -70,7 +70,14 @@ export class PostgresRoleRepository implements RoleRepository {
         ? await transaction.query<RoleRow>(sql, values)
         : await this.database.query<RoleRow>(sql, values);
 
-      return this.toRole(rows[0]);
+      const row = rows[0];
+
+      if (!row) {
+        throw new Error("Failed to create role: no row returned");
+      }
+
+      return this.toRole(row);
+
     } catch (error) {
       translatePostgresError(error);
     }
@@ -92,7 +99,9 @@ export class PostgresRoleRepository implements RoleRepository {
       [id],
     );
 
-    return rows.length > 0 ? this.toRole(rows[0]) : null;
+    const row = rows[0];
+
+    return row ? this.toRole(row) : null;
   }
 
   async findByName(
@@ -115,7 +124,9 @@ export class PostgresRoleRepository implements RoleRepository {
       [organizationId, name],
     );
 
-    return rows.length > 0 ? this.toRole(rows[0]) : null;
+    const row = rows[0];
+
+    return row ? this.toRole(row) : null;
   }
 
   async findByOrganization(organizationId: string): Promise<Role[]> {
@@ -177,7 +188,9 @@ export class PostgresRoleRepository implements RoleRepository {
       values,
     );
 
-    return rows.length > 0 ? this.toRole(rows[0]) : null;
+    const row = rows[0];
+
+    return row ? this.toRole(row) : null;
   }
 
   async delete(id: string): Promise<void> {

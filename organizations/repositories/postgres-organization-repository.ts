@@ -50,7 +50,15 @@ export class PostgresOrganizationRepository
         ? await transaction.query<OrganizationRow>(sql, values)
         : await this.database.query<OrganizationRow>(sql, values);
 
-      return this.toOrganization(rows[0]);
+      const row = rows[0];
+
+      if (!row) {
+        throw new Error(
+          "Failed to create organization: no row returned",
+        );
+      }
+
+      return this.toOrganization(row);
     } catch (error) {
       translatePostgresError(error);
     }
@@ -66,7 +74,9 @@ export class PostgresOrganizationRepository
       [id],
     );
 
-    return rows.length > 0 ? this.toOrganization(rows[0]) : null;
+    const row = rows[0];
+
+    return row ? this.toOrganization(row) : null;
   }
 
   async findBySlug(slug: string): Promise<Organization | null> {
@@ -79,7 +89,9 @@ export class PostgresOrganizationRepository
       [slug],
     );
 
-    return rows.length > 0 ? this.toOrganization(rows[0]) : null;
+    const row = rows[0];
+
+    return row ? this.toOrganization(row) : null;
   }
 
   async findAll(): Promise<Organization[]> {
@@ -158,7 +170,9 @@ export class PostgresOrganizationRepository
         values,
       );
 
-      return rows.length > 0 ? this.toOrganization(rows[0]) : null;
+      const row = rows[0];
+
+      return row ? this.toOrganization(row) : null;
     } catch (error) {
       translatePostgresError(error);
     }

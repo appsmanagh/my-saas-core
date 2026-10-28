@@ -37,7 +37,7 @@ export function validateLoginInput(input: unknown): {
 
   if (!result.success) {
     throw new ValidationError(
-      result.error.issues[0].message,
+      result.error.issues[0]?.message ?? "Invalid login input",
     );
   }
 
@@ -53,7 +53,7 @@ export function validateRegisterInput(input: unknown): {
 
   if (!result.success) {
     throw new ValidationError(
-      result.error.issues[0].message,
+      result.error.issues[0]?.message ?? "Invalid registration input",
     );
   }
 

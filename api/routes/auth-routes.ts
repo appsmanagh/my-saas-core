@@ -74,10 +74,9 @@ export function createAuthRoutes(
         validateLoginInput(request.body);
 
          // 24. y aqui lo usamos el input
-        const result =
-        await authService.login({
+        const result = await authService.login({
           ...input,
-          ip: request.ip,
+          ip: request.ip ?? "unknown",
         });
         //24. y esto es el code reemplazado
         // const {

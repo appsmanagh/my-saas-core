@@ -1,5 +1,5 @@
 // 14. este file prueba el repository de auth 
-
+import assert from "node:assert/strict";
 import { createDatabase } from "../../database/database-provider";
 import { PostgresAuthRepository } from "../../auth/repositories/postgres-auth-repository";
 import { PasswordService } from "../../auth/password-service";
@@ -38,7 +38,10 @@ async function main() {
       );
     }
 
-    const userId = users[0].id;
+    const firstUser = users[0];
+    assert.ok(firstUser);
+
+    const userId = firstUser.id;
 
     const password = "MySecurePassword123!";
 

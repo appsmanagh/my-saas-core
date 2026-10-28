@@ -5,7 +5,7 @@ import type {
   Role,
   CreateRoleInput,
   UpdateRoleInput,
-} from "../roles/role";
+} from "../../roles/role";
 import type { RoleRepository } from "../../roles/role-repository";
 import { RoleService } from "../../roles/role-service";
 
@@ -144,6 +144,21 @@ class InMemoryRolePermissionRepository implements RolePermissionRepository {
     permissions.add(permissionKey);
     this.assignments.set(roleId, permissions);
     this.assignCalls.push(`${roleId}:${permissionKey}`);
+  }
+
+  async assignMany(
+    roleId: string,
+    permissionKeys: PermissionKey[],
+  ): Promise<void> {
+    const permissions =
+      this.assignments.get(roleId) ?? new Set<PermissionKey>();
+
+    for (const permissionKey of permissionKeys) {
+      permissions.add(permissionKey);
+      this.assignCalls.push(`${roleId}:${permissionKey}`);
+    }
+
+    this.assignments.set(roleId, permissions);
   }
 
   async remove(

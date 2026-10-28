@@ -147,7 +147,9 @@ export class PostgresRolePermissionRepository
       [permissionKey],
     );
 
-    if (permissionRows.length === 0) {
+    const permissionRow = permissionRows[0];
+
+    if (!permissionRow) {
       throw new NotFoundError("Permission not found");
     }
 
@@ -157,7 +159,7 @@ export class PostgresRolePermissionRepository
         WHERE role_id = $1
           AND permission_id = $2
       `,
-      [roleId, permissionRows[0].id],
+      [roleId, permissionRow.id],
     );
   }
 

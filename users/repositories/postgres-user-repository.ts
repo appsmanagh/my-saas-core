@@ -51,7 +51,13 @@ export class PostgresUserRepository implements UserRepository {
       return null;
     }
 
-    return this.toUser(rows[0]);
+    const row = rows[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return this.toUser(row);
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -74,7 +80,13 @@ export class PostgresUserRepository implements UserRepository {
       return null;
     }
 
-    return this.toUser(rows[0]);
+    const row = rows[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return this.toUser(row);
   }
 
   async create(user: User): Promise<User> {
@@ -111,7 +123,13 @@ export class PostgresUserRepository implements UserRepository {
         ],
       );
 
-      return this.toUser(rows[0]);
+      const row = rows[0];
+
+      if (!row) {
+        throw new Error("User insert returned no rows.");
+      }
+
+      return this.toUser(row);
     } catch (error) {
       //8. esi se usa postgres errors, 
             // esta validation tambien se hace en userservice al momento de crear el user 
@@ -161,7 +179,13 @@ export class PostgresUserRepository implements UserRepository {
       return null;
     }
 
-    return this.toUser(rows[0]);
+    const row = rows[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return this.toUser(row);
   }
 
   async delete(id: string): Promise<void> {

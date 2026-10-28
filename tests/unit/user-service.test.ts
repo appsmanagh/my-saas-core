@@ -1,7 +1,7 @@
 
 // 5. con este file se prueba user-service
-import { InMemoryUserRepository } from "../users/repositories/in-memory-user-repository";
-import { UserService } from "../users/user-service";
+import { InMemoryUserRepository } from "../../users/repositories/in-memory-user-repository";
+import { UserService } from "../../users/user-service";
 
 async function main() {
   const repository = new InMemoryUserRepository();

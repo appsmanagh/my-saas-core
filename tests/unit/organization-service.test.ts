@@ -112,7 +112,7 @@ async function main() {
   // 10. Delete organization
   await service.deleteOrganization(second.id);
 
-  assert.equal(await repository.findById(second.id), null);
+  assert.equal(await organizationRepository.findById(second.id), null);
   console.log("PASS delete organization");
 
   // 11. Reject deletion of a missing organization

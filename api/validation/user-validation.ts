@@ -24,7 +24,7 @@ export function validateUpdateUserProfileInput(
 
   if (!result.success) {
     throw new ValidationError(
-      result.error.issues[0].message,
+      result.error.issues[0]?.message ?? "Invalid user profile input",
     );
   }
 

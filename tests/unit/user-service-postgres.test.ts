@@ -1,9 +1,9 @@
 
 //10. este es el file que prueba user con DDBB postgres y el fluj completo del api(con usaerservice) 
 
-import { createDatabase } from "../database/database-provider";
-import { PostgresUserRepository } from "../users/repositories/postgres-user-repository";
-import { UserService } from "../users/user-service";
+import { createDatabase } from "../../database/database-provider";
+import { PostgresUserRepository } from "../../users/repositories/postgres-user-repository";
+import { UserService } from "../../users/user-service";
 
 async function main() {
   const database = createDatabase();

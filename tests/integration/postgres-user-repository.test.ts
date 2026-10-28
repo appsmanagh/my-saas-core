@@ -1,5 +1,6 @@
-import { createDatabase } from "../database/database-provider";
-import { PostgresUserRepository } from "../users/repositories/postgres-user-repository";
+import { createDatabase } from "../../database/database-provider";
+import { PostgresUserRepository } from "../../users/repositories/postgres-user-repository";
+import type { User } from "../../users/user";
 
 async function main() {
   const database = createDatabase();
@@ -8,10 +9,11 @@ async function main() {
 
   const repository = new PostgresUserRepository(database);
 
-  const user = {
+ const user: User = {
     id: crypto.randomUUID(),
     email: `test-${Date.now()}@example.com`,
     name: "Postgres Test",
+    status: "active",
     createdAt: new Date(),
     updatedAt: new Date(),
   };

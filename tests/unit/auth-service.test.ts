@@ -12,6 +12,9 @@ import { PostgresSessionRepository } from "../../auth/sessions/postgres-session-
 
 import { AuthService } from "../../auth/auth-service";
 
+import { InMemoryRateLimiter } from "../../security/adapters/in-memory-rate-limiter";
+import { LoginRateLimit } from "../../security/login-rate-limit";
+
 async function main() {
   const database = createDatabase();
 
@@ -33,12 +36,18 @@ async function main() {
     const sessionRepository =
       new PostgresSessionRepository(database);
 
+    const loginRateLimit = new LoginRateLimit(
+      new InMemoryRateLimiter(10, 60),
+      new InMemoryRateLimiter(5, 60),
+    );
+
     const authService =
       new AuthService(
         userService,
         passwordService,
         authRepository,
         sessionRepository,
+        loginRateLimit
       );
 
     const email =
@@ -61,11 +70,11 @@ async function main() {
 
     // LOGIN
 
-    const login =
-      await authService.login(
-        email,
-        password,
-      );
+    const login = await authService.login({
+      email,
+      password,
+      ip: "127.0.0.1",
+    });
 
     console.log("2. LOGIN");
     console.log({
@@ -77,10 +86,11 @@ async function main() {
     // WRONG PASSWORD
 
     try {
-      await authService.login(
+      await authService.login({
         email,
-        "WrongPassword123!",
-      );
+        password: "WrongPassword123!",
+        ip: "127.0.0.1",
+      });
 
       console.log(
         "3. WRONG PASSWORD FAILED",

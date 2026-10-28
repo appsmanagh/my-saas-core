@@ -25,7 +25,9 @@ export class PostgresPermissionRepository implements PermissionRepository {
       [id],
     );
 
-    return rows.length > 0 ? this.toPermission(rows[0]) : null;
+    const row = rows[0];
+
+    return row ? this.toPermission(row) : null;
   }
 
   async findByKey(key: PermissionKey): Promise<Permission | null> {
@@ -38,7 +40,9 @@ export class PostgresPermissionRepository implements PermissionRepository {
       [key],
     );
 
-    return rows.length > 0 ? this.toPermission(rows[0]) : null;
+   const row = rows[0];
+
+   return row ? this.toPermission(row) : null;
   }
 
   async findByKeys(keys: PermissionKey[]): Promise<Permission[]> {

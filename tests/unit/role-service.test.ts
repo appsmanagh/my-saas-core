@@ -15,7 +15,7 @@ import type {
   Role,
   CreateRoleInput,
   UpdateRoleInput,
-} from "../roles/role";
+} from "../../roles/role";
 
 import type {
   RoleRepository,

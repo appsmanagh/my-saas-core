@@ -17,7 +17,9 @@ class FakeDatabase implements Database {
     text: string,
     values?: unknown[],
   ): Promise<T[]> {
-    this.calls.push({ text, values });
+    this.calls.push(
+      values === undefined ? { text } : { text, values },
+    );
     return (this.responses.shift() ?? []) as T[];
   }
 }
@@ -48,8 +50,11 @@ async function main() {
   assert.equal(created.organizationId, "org-123");
   assert.equal(created.name, "Admin");
   assert.equal(created.description, "Administrator role");
-  assert.match(database.calls[0].text, /INSERT INTO roles/i);
-  assert.deepEqual(database.calls[0].values?.slice(1, 4), [
+  const firstCall = database.calls[0];
+  assert.ok(firstCall);
+
+  assert.match(firstCall.text, /INSERT INTO roles/i);
+  assert.deepEqual(firstCall.values?.slice(1, 4), [
     "org-123",
     "Admin",
     "Administrator role",
@@ -62,8 +67,11 @@ async function main() {
   const found = await repository.findById("role-123");
 
   assert.equal(found?.id, "role-123");
-  assert.match(database.calls[1].text, /WHERE id = \$1/i);
-  assert.deepEqual(database.calls[1].values, ["role-123"]);
+  const secondCall = database.calls[1];
+  assert.ok(secondCall);
+
+  assert.match(secondCall.text, /WHERE id = \$1/i);
+  assert.deepEqual(secondCall.values, ["role-123"]);
   console.log("PASS findById uses a parameterized query");
 
   // 3. Missing role
@@ -80,8 +88,13 @@ async function main() {
   const roles = await repository.findByOrganization("org-123");
 
   assert.equal(roles.length, 1);
-  assert.equal(roles[0].organizationId, "org-123");
-  assert.match(database.calls[3].text, /ORDER BY name ASC/i);
+  const firstRole = roles[0];
+  assert.ok(firstRole);
+  assert.equal(firstRole.organizationId, "org-123");
+
+  const fourthCall = database.calls[3];
+  assert.ok(fourthCall);
+  assert.match(fourthCall.text, /ORDER BY name ASC/i);
   console.log("PASS findByOrganization maps the results");
 
   // 5. Update only the name
@@ -92,15 +105,19 @@ async function main() {
   });
 
   assert.equal(updated?.name, "Owner");
-  assert.match(database.calls[4].text, /name = \$2/i);
-  assert.deepEqual(database.calls[4].values, ["role-123", "Owner"]);
+  const fifthCall = database.calls[4];
+  assert.ok(fifthCall);
+
+  assert.match(fifthCall.text, /name = \$2/i);
+  assert.deepEqual(fifthCall.values, ["role-123", "Owner"]);
   console.log("PASS update builds the expected parameterized query");
 
   // 6. Delete
   await repository.delete("role-123");
 
-  assert.match(database.calls[5].text, /DELETE FROM roles/i);
-  assert.deepEqual(database.calls[5].values, ["role-123"]);
+  const sixthCall = database.calls[5];
+  assert.ok(sixthCall);
+  assert.match(sixthCall.text, /DELETE FROM roles/i);
   console.log("PASS delete uses a parameterized query");
 
   console.log("\nAll PostgresRoleRepository tests passed!");

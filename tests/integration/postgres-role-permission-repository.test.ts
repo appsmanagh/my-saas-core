@@ -13,17 +13,18 @@
 
 import assert from "node:assert/strict";
 
-//32.  Usa aquí el mismo import de createDatabase que ya funciona
-// en tests/integration/postgres-role-repository.test.ts.
-import { createDatabase } from "../../database/database-provider";
+
 
 import { PostgresOrganizationRepository } from "../../organizations/repositories/postgres-organization-repository";
 import { PostgresRoleRepository } from "../../roles/repositories/postgres-role-repository";
 import { PostgresRolePermissionRepository } from "../../roles/repositories/postgres-role-permission-repository";
 import { PERMISSION_KEYS } from "../../permissions/permission";
+//32.  Usa aquí el mismo import de createDatabase que ya funciona
+// en tests/integration/postgres-role-repository.test.ts.
+import { PostgresDatabase } from "../../database/adapters/postgres/postgres-database";
 
 async function main() {
-  const database = createDatabase();
+  const database = new PostgresDatabase();
   await database.connect();
 
   let organizationId: string | undefined;
@@ -231,7 +232,9 @@ async function main() {
       [role.id],
     );
 
-    assert.equal(rowsAfterRoleDeletion[0].count, "0");
+    const deletionRow = rowsAfterRoleDeletion[0];
+    assert.ok(deletionRow);
+    assert.equal(deletionRow.count, "0");
 
     console.log("PASS deleting role removes its permission assignments");
 

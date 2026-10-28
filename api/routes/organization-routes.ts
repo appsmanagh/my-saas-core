@@ -10,6 +10,8 @@ import {
 import type { OrganizationService } from "../../organizations/organization-service";
 import type { CreateOrganizationWithOwnerService } from "../../organizations/create-organization-with-owner-service";
 
+import { UnauthorizedError } from "../../errors";
+
 export function createOrganizationRoutes(
   organizationService: OrganizationService,
   onboardingService: CreateOrganizationWithOwnerService,
@@ -28,6 +30,9 @@ export function createOrganizationRoutes(
       next: NextFunction,
     ) => {
       try {
+        if (!request.user) {
+          throw new UnauthorizedError("Authentication required");
+        }
         const organizations =
           await organizationService.findOrganizationsByUserId(
             request.user.id,
@@ -51,6 +56,10 @@ export function createOrganizationRoutes(
       next: NextFunction,
     ) => {
       try {
+        if (!request.user) {
+          throw new UnauthorizedError("Authentication required");
+        }
+        
         const result = await onboardingService.execute(
           {
             name: request.body?.name,

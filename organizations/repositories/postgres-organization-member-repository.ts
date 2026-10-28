@@ -52,7 +52,16 @@ async create(
         ? await transaction.query<OrganizationMemberRow>(sql, values)
         : await this.database.query<OrganizationMemberRow>(sql, values);
 
-      return this.toOrganizationMember(rows[0]);
+      const row = rows[0];
+
+      if (!row) {
+        throw new Error(
+          "Failed to create organization member: no row returned",
+        );
+      }
+
+      return this.toOrganizationMember(row);
+
     } catch (error) {
       translatePostgresError(error);
     }
@@ -73,9 +82,9 @@ async create(
       [userId, organizationId],
     );
 
-    return rows.length > 0
-      ? this.toOrganizationMember(rows[0])
-      : null;
+    const row = rows[0];
+
+    return row ? this.toOrganizationMember(row) : null;
   }
 
   //40. se agrega este metodo para llamar a las organization del usuario logueado
@@ -128,9 +137,9 @@ async create(
         [userId, organizationId, roleId],
       );
 
-      return rows.length > 0
-        ? this.toOrganizationMember(rows[0])
-        : null;
+      const row = rows[0];
+
+      return row ? this.toOrganizationMember(row) : null;
     } catch (error) {
       translatePostgresError(error);
     }

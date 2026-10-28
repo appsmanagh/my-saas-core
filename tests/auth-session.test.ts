@@ -9,6 +9,9 @@ import { PostgresAuthRepository } from "../auth/repositories/postgres-auth-repos
 import { PostgresSessionRepository } from "../auth/sessions/postgres-session-repository";
 import { SessionTokenService } from "../auth/sessions/session-token-service";
 
+import { InMemoryRateLimiter } from "../security/adapters/in-memory-rate-limiter";
+import { LoginRateLimit } from "../security/login-rate-limit";
+
 import { AuthService } from "../auth/auth-service";
 
 async function main() {
@@ -32,13 +35,18 @@ async function main() {
     const sessionRepository =
       new PostgresSessionRepository(database);
 
-    const authService =
-      new AuthService(
-        userService,
-        passwordService,
-        authRepository,
-        sessionRepository,
-      );
+    const loginRateLimit = new LoginRateLimit(
+      new InMemoryRateLimiter(10, 60),
+      new InMemoryRateLimiter(5, 60),
+    );
+
+    const authService = new AuthService(
+      userService,
+      passwordService,
+      authRepository,
+      sessionRepository,
+      loginRateLimit,
+    );
 
     const email =
       `session-test-${crypto.randomUUID()}@example.com`;
@@ -60,11 +68,11 @@ async function main() {
 
     // 2. LOGIN
 
-    const login =
-      await authService.login(
-        email,
-        password,
-      );
+    const login = await authService.login({
+      email,
+      password,
+      ip: "127.0.0.1",
+    });
 
     console.log("2. LOGIN");
     console.log({

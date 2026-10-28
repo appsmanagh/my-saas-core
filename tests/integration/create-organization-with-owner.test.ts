@@ -167,10 +167,13 @@ assert.equal(
     [failedSlug],
     );
 
+    const remainingRole = remainingRoles[0];
+    assert.ok(remainingRole);
+
     assert.equal(
-    Number(remainingRoles[0].count),
-    0,
-    "Roles should have been rolled back",
+      Number(remainingRole.count),
+      0,
+      "Roles should have been rolled back",
     );
 
     const remainingAssignments = await database.query<{ count: number }>(
@@ -186,10 +189,13 @@ assert.equal(
     [failedSlug],
     );
 
+    const remainingAssignment = remainingAssignments[0];
+    assert.ok(remainingAssignment);
+
     assert.equal(
-    Number(remainingAssignments[0].count),
-    0,
-    "Permission assignments should have been rolled back",
+      Number(remainingAssignment.count),
+      0,
+      "Permission assignments should have been rolled back",
     );
 
     console.log("PASS failed onboarding rolls back organization, roles and permission assignments");

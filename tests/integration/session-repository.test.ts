@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { createDatabase } from "../../database/database-provider";
 import { PostgresSessionRepository } from "../../auth/sessions/postgres-session-repository";
 import { SessionTokenService } from "../../auth/sessions/session-token-service";
@@ -30,7 +31,10 @@ async function main() {
       );
     }
 
-    const userId = users[0].id;
+    const firstUser = users[0];
+    assert.ok(firstUser);
+
+    const userId = firstUser.id;
 
     const token = tokenService.generateToken();
     const tokenHash = tokenService.hashToken(token);

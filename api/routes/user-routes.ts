@@ -12,6 +12,8 @@ import type { UserService } from "../../users/user-service";
 //25. se importa el validation input
 import { validateUpdateUserProfileInput } from "../validation/user-validation";
 
+import { UnauthorizedError } from "../../errors";
+
 
 export function createUserRoutes(
   userService: UserService,
@@ -56,6 +58,9 @@ export function createUserRoutes(
     )=>{
 
     try {
+      if (!request.user) {
+        throw new UnauthorizedError("Authentication required");
+      }
 // 25. aqui se uso la function : validateUpdateUserProfileInput
     const input =
           validateUpdateUserProfileInput(

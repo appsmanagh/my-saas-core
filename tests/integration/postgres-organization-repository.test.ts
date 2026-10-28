@@ -19,7 +19,9 @@ class FakeDatabase implements Database {
     text: string,
     values?: unknown[],
   ): Promise<T[]> {
-    this.calls.push({ text, values });
+    this.calls.push(
+      values === undefined ? { text } : { text, values },
+    );
     return (this.responses.shift() ?? []) as T[];
   }
 }
@@ -48,8 +50,11 @@ async function main() {
   assert.equal(created.name, "My Company");
   assert.equal(created.slug, "my-company");
   assert.ok(created.createdAt instanceof Date);
-  assert.match(database.calls[0].text, /INSERT INTO organizations/i);
-  assert.deepEqual(database.calls[0].values?.slice(1), [
+  const firstCall = database.calls[0];
+  assert.ok(firstCall);
+  
+  assert.match(firstCall.text, /INSERT INTO organizations/i);
+  assert.deepEqual(firstCall.values?.slice(1), [
     "My Company",
     "my-company",
   ]);
@@ -61,8 +66,11 @@ async function main() {
   const foundById = await repository.findById("org-123");
 
   assert.equal(foundById?.id, "org-123");
-  assert.match(database.calls[1].text, /WHERE id = \$1/i);
-  assert.deepEqual(database.calls[1].values, ["org-123"]);
+  const secondCall = database.calls[1];
+  assert.ok(secondCall);
+
+  assert.match(secondCall.text, /WHERE id = \$1/i);
+  assert.deepEqual(secondCall.values, ["org-123"]);
   console.log("PASS findById uses a parameterized query");
 
   // 3. Find by slug
@@ -71,8 +79,11 @@ async function main() {
   const foundBySlug = await repository.findBySlug("my-company");
 
   assert.equal(foundBySlug?.slug, "my-company");
-  assert.match(database.calls[2].text, /WHERE slug = \$1/i);
-  assert.deepEqual(database.calls[2].values, ["my-company"]);
+  const thirdCall = database.calls[2];
+  assert.ok(thirdCall);
+
+  assert.match(thirdCall.text, /WHERE slug = \$1/i);
+  assert.deepEqual(thirdCall.values, ["my-company"]);
   console.log("PASS findBySlug uses a parameterized query");
 
   // 4. Missing organization
@@ -97,8 +108,13 @@ async function main() {
   const organizations = await repository.findAll();
 
   assert.equal(organizations.length, 2);
-  assert.equal(organizations[1].slug, "another-company");
-  assert.match(database.calls[4].text, /ORDER BY name ASC/i);
+  const secondOrganization = organizations[1];
+  assert.ok(secondOrganization);
+  assert.equal(secondOrganization.slug, "another-company");
+
+  const fifthCall = database.calls[4];
+  assert.ok(fifthCall);
+  assert.match(fifthCall.text, /ORDER BY name ASC/i);
   console.log("PASS findAll maps the returned rows");
 
   // 6. Update name
@@ -111,8 +127,11 @@ async function main() {
   });
 
   assert.equal(updated?.name, "Updated Company");
-  assert.match(database.calls[5].text, /name = \$2/i);
-  assert.deepEqual(database.calls[5].values, [
+  const sixthCall = database.calls[5];
+  assert.ok(sixthCall);
+
+  assert.match(sixthCall.text, /name = \$2/i);
+  assert.deepEqual(sixthCall.values, [
     "org-123",
     "Updated Company",
   ]);
@@ -124,14 +143,19 @@ async function main() {
   const unchanged = await repository.update("org-123", {});
 
   assert.equal(unchanged?.id, "org-123");
-  assert.match(database.calls[6].text, /WHERE id = \$1/i);
+  const seventhCall = database.calls[6];
+  assert.ok(seventhCall);
+  assert.match(seventhCall.text, /WHERE id = \$1/i);
   console.log("PASS empty update delegates to findById");
 
   // 8. Delete
   await repository.delete("org-123");
 
-  assert.match(database.calls[7].text, /DELETE FROM organizations/i);
-  assert.deepEqual(database.calls[7].values, ["org-123"]);
+ const eighthCall = database.calls[7];
+  assert.ok(eighthCall);
+
+  assert.match(eighthCall.text, /DELETE FROM organizations/i);
+  assert.deepEqual(eighthCall.values, ["org-123"]);
   console.log("PASS delete uses a parameterized query");
 
   console.log("\nAll PostgresOrganizationRepository tests passed!");
