@@ -13,3 +13,6 @@ export { DatabaseError } from "./database-error";
 export * from "./unauthorized-error";
 
 export { RateLimitError } from "./rateLimitError";
+
+//41. se importa el type de error ForbiddenError
+export { ForbiddenError } from "./forbidden-error";

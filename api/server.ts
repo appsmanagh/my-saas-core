@@ -62,6 +62,13 @@ import { PermissionService } from "../permissions/permission-service";
 import { createOrganizationRoutes } from "./routes/organization-routes";
 //39. end----
 
+//41. se importan estos modules para el feature de authorization
+import { AuthorizationService } from "../authorization/authorization-service";
+import { createPermissionMiddleware } from "./middleware/permission-middleware";
+// se agregan las rutas de roles
+import { createRoleRoutes } from "./routes/role-routes";
+//41. end ---
+
 const app = express();
 
 app.use(express.json());
@@ -143,29 +150,39 @@ const onboardingService =
   );
 //39 end---
 
-  const userRepository =
-    new PostgresUserRepository(database);
+//41. se define authorizationService
+const authorizationService =
+  new AuthorizationService(
+    organizationMemberRepository,
+    roleService,
+    rolePermissionService,
+  );
 
-  const userService =
-    new UserService(userRepository);
+//41. end ---
 
-  const passwordService =
-    new PasswordService();
+const userRepository =
+  new PostgresUserRepository(database);
 
-  const authRepository =
-    new PostgresAuthRepository(database);
+const userService =
+  new UserService(userRepository);
 
-  const sessionRepository =
-    new PostgresSessionRepository(database);
+const passwordService =
+  new PasswordService();
+
+const authRepository =
+  new PostgresAuthRepository(database);
+
+const sessionRepository =
+  new PostgresSessionRepository(database);
 
 //22. composition root - LoginRateLimit
-  //22 aqui es donde se hace el cambi a redis
-  // Rate limiter por IP
-  const ipRateLimiter =
-    new InMemoryRateLimiter(
-      10,
-      60,
-    );
+//22 aqui es donde se hace el cambi a redis
+// Rate limiter por IP
+const ipRateLimiter =
+  new InMemoryRateLimiter(
+    10,
+    60,
+  );
 
 //22. composition root - LoginRateLimit
   //22 aqui es donde se hace el cambi a redis
@@ -198,6 +215,18 @@ const onboardingService =
   const requireAuth =
     createAuthMiddleware(authService);
 
+//41. se define requirePermission
+const requirePermission = (
+  permissionKey: import("../permissions/permission").PermissionKey,
+  organizationIdParam = "organizationId",
+) =>
+  createPermissionMiddleware(
+    authorizationService,
+    permissionKey,
+    organizationIdParam,
+  );
+//41. end ---
+
   app.use(
     "/api/auth",
     createAuthRoutes(
@@ -222,6 +251,17 @@ const onboardingService =
     createOrganizationRoutes(
       organizationService,
       onboardingService,
+      requireAuth,
+    ),
+  );
+
+  //41. se llaman los componentes del fuetiure de authorizations
+  // 41. aqui ya se usa authorizationService para saber si el user puede hacer la accion
+  app.use(
+    "/api",
+    createRoleRoutes(
+      roleService,
+      authorizationService,
       requireAuth,
     ),
   );
