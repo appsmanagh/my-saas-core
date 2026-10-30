@@ -257,10 +257,12 @@ const requirePermission = (
 
   //41. se llaman los componentes del fuetiure de authorizations
   // 41. aqui ya se usa authorizationService para saber si el user puede hacer la accion
+  //43. se agrerga el rolePermissionService a createRoleRoutes
   app.use(
     "/api",
     createRoleRoutes(
       roleService,
+      rolePermissionService,
       authorizationService,
       requireAuth,
     ),
