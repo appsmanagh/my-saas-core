@@ -88,6 +88,7 @@ async function main() {
     organizationId: "org-a",
     name: "Admin",
     description: null,
+    isSystem: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -97,6 +98,7 @@ async function main() {
     organizationId: "org-b",
     name: "Admin",
     description: null,
+    isSystem: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

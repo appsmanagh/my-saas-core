@@ -63,14 +63,16 @@ export class RoleService {
       );
     }
     // 37. se agrega transaction para manejar transactio support
-   return this.roleRepository.create(
-    {
-      organizationId,
-      name,
-      description,
-    },
-    transaction,
-  );
+    //44. se agrega isSystem
+    return this.roleRepository.create(
+      {
+        organizationId,
+        name,
+        description,
+        isSystem: input.isSystem ?? false,
+      },
+      transaction,
+    );
   }
 
   async getRoleById(id: string): Promise<Role> {
@@ -106,6 +108,12 @@ export class RoleService {
     input: UpdateRoleInput,
   ): Promise<Role> {
     const role = await this.getRoleById(id);
+
+    if (role.isSystem) {
+      throw new ValidationError(
+        "System roles cannot be modified",
+      );
+    }
 
     const updates: UpdateRoleInput = {};
 
@@ -157,7 +165,14 @@ export class RoleService {
   }
 
   async deleteRole(id: string): Promise<void> {
-    await this.getRoleById(id);
+    const role = await this.getRoleById(id);
+
+    if (role.isSystem) {
+      throw new ValidationError(
+        "System roles cannot be deleted",
+      );
+    }
+
     await this.roleRepository.delete(id);
   }
 }

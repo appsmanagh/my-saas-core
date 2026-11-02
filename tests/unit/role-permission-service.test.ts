@@ -33,6 +33,7 @@ class InMemoryRoleRepository implements RoleRepository {
       organizationId: input.organizationId,
       name: input.name,
       description: input.description ?? null,
+      isSystem: input.isSystem ?? false,
       createdAt: now,
       updatedAt: now,
     };
@@ -274,6 +275,54 @@ async function main() {
     NotFoundError,
   );
   console.log("PASS: reject removal of unknown permission");
+
+
+    // 9. Create a system role.
+  const ownerRole = await roleService.createRole({
+    organizationId: "org-1",
+    name: "Owner",
+    isSystem: true,
+  });
+
+  await service.assignPermissions(ownerRole.id, [
+    PERMISSION_KEYS.ROLES_READ,
+  ]);
+
+  console.log("PASS: create system role");
+
+  // 10. A system role cannot lose protected permissions.
+  await assert.rejects(
+    () =>
+      service.removePermission(
+        ownerRole.id,
+        PERMISSION_KEYS.ROLES_READ,
+      ),
+    ValidationError,
+  );
+
+  const ownerPermissions =
+    await service.getPermissionsByRole(ownerRole.id);
+
+  assert.ok(ownerPermissions.includes(PERMISSION_KEYS.ROLES_READ));
+
+  console.log("PASS: protect system role permissions");
+
+  // 11. Normal roles can still remove permissions.
+  await service.assignPermissions(role.id, [
+    PERMISSION_KEYS.ROLES_READ,
+  ]);
+
+  await service.removePermission(
+    role.id,
+    PERMISSION_KEYS.ROLES_READ,
+  );
+
+  const normalRolePermissions =
+    await service.getPermissionsByRole(role.id);
+
+  assert.ok(!normalRolePermissions.includes(PERMISSION_KEYS.ROLES_READ));
+
+  console.log("PASS: normal roles can remove permissions");
 }
 
 main().catch((error) => {

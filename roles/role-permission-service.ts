@@ -13,6 +13,15 @@ import { ValidationError } from "../errors";
 //37. se inporta el modulo de transaction para transaction support para organization+rolowner+permissions+membresia
 import type { DatabaseTransaction } from "../database/transactional-database";
 
+//44. se agrega esta lista de permiusos protegidos del owner
+const PROTECTED_OWNER_PERMISSIONS: PermissionKey[] = [
+  "roles:read",
+  "roles:create",
+  "roles:update",
+  "roles:delete",
+  "roles:assign",
+];
+
 export class RolePermissionService {
   constructor(
     private readonly roleService: RoleService,
@@ -55,14 +64,23 @@ export class RolePermissionService {
     );
   }
 
-  async removePermission(
+  //44. se modifica esta function para manejar el rol owner
+ async removePermission(
     roleId: string,
     permissionKey: PermissionKey,
   ): Promise<void> {
-    // Validate the role and permission before removing the assignment.
-    await this.roleService.getRoleById(roleId);
+    const role = await this.roleService.getRoleById(roleId);
 
     await this.permissionService.getPermissionByKey(permissionKey);
+
+    if (
+      role.isSystem &&
+      PROTECTED_OWNER_PERMISSIONS.includes(permissionKey)
+    ) {
+      throw new ValidationError(
+        "Cannot remove a protected permission from a system role",
+      );
+    }
 
     await this.rolePermissionRepository.remove(
       roleId,

@@ -40,6 +40,7 @@ class InMemoryRoleRepository implements RoleRepository {
       organizationId: input.organizationId,
       name: input.name,
       description: input.description ?? null,
+      isSystem: false,
       createdAt: now,
       updatedAt: now,
     };

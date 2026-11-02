@@ -62,11 +62,13 @@ export class CreateOrganizationWithOwnerService {
         );
 
       // 2. Crear el rol Owner dentro de la misma transacción.
+      //44. se agrega la column isSystem
       const ownerRole = await this.roleService.createRole(
         {
           organizationId: organization.id,
           name: "Owner",
           description: "Organization owner",
+          isSystem: true,
         },
         transaction,
       );

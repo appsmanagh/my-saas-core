@@ -1,6 +1,4 @@
 
-
-
 import type { Database } from "../../database/database";
 //36. se agrega de modulo de transaction support
 import type { DatabaseTransaction } from "../../database/transactional-database";
@@ -14,11 +12,14 @@ import type {
 
 import { translatePostgresError } from "../../database/adapters/postgres/postgres-error";
 
+//44. se agrego la column is_system para proteger el role owner
+//44. se agrego tambien en las functions
 interface RoleRow {
   id: string;
   organization_id: string;
   name: string;
   description: string | null;
+  is_system: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -30,7 +31,7 @@ export class PostgresRoleRepository implements RoleRepository {
   // - Si llamas create(input), usa el Database del repositorio como antes.
   // - Si llamas create(input, transaction), la inserción usa la transacción que le pasó el servicio coordinador.
   // - El SQL y la traducción de errores se mantienen en un solo lugar.
- async create(
+  async create(
     input: CreateRoleInput,
     transaction?: DatabaseTransaction,
   ): Promise<Role> {
@@ -43,15 +44,17 @@ export class PostgresRoleRepository implements RoleRepository {
         organization_id,
         name,
         description,
+        is_system,
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING
         id,
         organization_id,
         name,
         description,
+        is_system,
         created_at,
         updated_at
     `;
@@ -61,6 +64,7 @@ export class PostgresRoleRepository implements RoleRepository {
       input.organizationId,
       input.name,
       input.description ?? null,
+      input.isSystem ?? false,
       now,
       now,
     ];
@@ -77,7 +81,6 @@ export class PostgresRoleRepository implements RoleRepository {
       }
 
       return this.toRole(row);
-
     } catch (error) {
       translatePostgresError(error);
     }
@@ -91,6 +94,7 @@ export class PostgresRoleRepository implements RoleRepository {
           organization_id,
           name,
           description,
+          is_system,
           created_at,
           updated_at
         FROM roles
@@ -115,6 +119,7 @@ export class PostgresRoleRepository implements RoleRepository {
           organization_id,
           name,
           description,
+          is_system,
           created_at,
           updated_at
         FROM roles
@@ -137,6 +142,7 @@ export class PostgresRoleRepository implements RoleRepository {
           organization_id,
           name,
           description,
+          is_system,
           created_at,
           updated_at
         FROM roles
@@ -172,35 +178,44 @@ export class PostgresRoleRepository implements RoleRepository {
 
     assignments.push("updated_at = NOW()");
 
-    const rows = await this.database.query<RoleRow>(
-      `
-        UPDATE roles
-        SET ${assignments.join(", ")}
-        WHERE id = $1
-        RETURNING
-          id,
-          organization_id,
-          name,
-          description,
-          created_at,
-          updated_at
-      `,
-      values,
-    );
+    try {
+      const rows = await this.database.query<RoleRow>(
+        `
+          UPDATE roles
+          SET ${assignments.join(", ")}
+          WHERE id = $1
+          RETURNING
+            id,
+            organization_id,
+            name,
+            description,
+            is_system,
+            created_at,
+            updated_at
+        `,
+        values,
+      );
 
-    const row = rows[0];
+      const row = rows[0];
 
-    return row ? this.toRole(row) : null;
+      return row ? this.toRole(row) : null;
+    } catch (error) {
+      translatePostgresError(error);
+    }
   }
 
   async delete(id: string): Promise<void> {
-    await this.database.query(
-      `
-        DELETE FROM roles
-        WHERE id = $1
-      `,
-      [id],
-    );
+    try {
+      await this.database.query(
+        `
+          DELETE FROM roles
+          WHERE id = $1
+        `,
+        [id],
+      );
+    } catch (error) {
+      translatePostgresError(error);
+    }
   }
 
   private toRole(row: RoleRow): Role {
@@ -209,6 +224,7 @@ export class PostgresRoleRepository implements RoleRepository {
       organizationId: row.organization_id,
       name: row.name,
       description: row.description,
+      isSystem: row.is_system,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
