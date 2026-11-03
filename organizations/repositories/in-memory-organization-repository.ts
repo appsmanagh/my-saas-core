@@ -12,6 +12,8 @@ import type {
 import type { OrganizationRepository } from "../organization-repository";
 import type { OrganizationMemberRepository } from "../organization-member-repository";
 
+import type { DatabaseTransaction } from "../../database/transactional-database";
+
 export class InMemoryOrganizationRepository
   implements OrganizationRepository
 {
@@ -38,6 +40,13 @@ export class InMemoryOrganizationRepository
 
   async findById(id: string): Promise<Organization | null> {
     return this.organizations.get(id) ?? null;
+  }
+
+  async lockById(
+    id: string,
+    _transaction: DatabaseTransaction,
+  ): Promise<Organization | null> {
+    return this.findById(id);
   }
 
   async findByUserId(userId: string): Promise<Organization[]> {

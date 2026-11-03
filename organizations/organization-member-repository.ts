@@ -35,15 +35,19 @@ export interface OrganizationMemberRepository {
     organizationId: string,
   ): Promise<OrganizationMember[]>;
 
+  //45. se permite que el metodo pueda recibir transaction
   updateRole(
     userId: string,
     organizationId: string,
     roleId: string,
+    transaction?: DatabaseTransaction,
   ): Promise<OrganizationMember | null>;
 
+  //45. se permite que el metodo pueda recibir transaction
   delete(
     userId: string,
     organizationId: string,
+    transaction?: DatabaseTransaction,
   ): Promise<void>;
 }
 

@@ -120,22 +120,27 @@ async create(
     return rows.map((row) => this.toOrganizationMember(row));
   }
 
+  //45. se permite que el metodo pueda recibir transaction
   async updateRole(
     userId: string,
     organizationId: string,
     roleId: string,
+    transaction?: DatabaseTransaction,
   ): Promise<OrganizationMember | null> {
     try {
-      const rows = await this.database.query<OrganizationMemberRow>(
-        `
-          UPDATE organization_members
-          SET role_id = $3
-          WHERE user_id = $1
-            AND organization_id = $2
-          RETURNING user_id, organization_id, role_id, created_at
-        `,
-        [userId, organizationId, roleId],
-      );
+      const sql = `
+        UPDATE organization_members
+        SET role_id = $3
+        WHERE user_id = $1
+          AND organization_id = $2
+        RETURNING user_id, organization_id, role_id, created_at
+      `;
+
+      const values = [userId, organizationId, roleId];
+
+      const rows = transaction
+        ? await transaction.query<OrganizationMemberRow>(sql, values)
+        : await this.database.query<OrganizationMemberRow>(sql, values);
 
       const row = rows[0];
 
@@ -145,18 +150,25 @@ async create(
     }
   }
 
+  //45. se permite que el metodo pueda recibir transaction
   async delete(
     userId: string,
     organizationId: string,
+    transaction?: DatabaseTransaction,
   ): Promise<void> {
-    await this.database.query(
-      `
-        DELETE FROM organization_members
-        WHERE user_id = $1
-          AND organization_id = $2
-      `,
-      [userId, organizationId],
-    );
+    const sql = `
+      DELETE FROM organization_members
+      WHERE user_id = $1
+        AND organization_id = $2
+    `;
+
+    const values = [userId, organizationId];
+
+    if (transaction) {
+      await transaction.query(sql, values);
+    } else {
+      await this.database.query(sql, values);
+    }
   }
 
   private toOrganizationMember(

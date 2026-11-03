@@ -41,6 +41,7 @@ class InMemoryRoleRepository implements RoleRepository {
       name: input.name,
       description: input.description ?? null,
       isSystem: false,
+      isOwner: input.isOwner ?? false,
       createdAt: now,
       updatedAt: now,
     };

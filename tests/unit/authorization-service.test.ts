@@ -89,6 +89,7 @@ async function main() {
     name: "Admin",
     description: null,
     isSystem: false,
+    isOwner: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -99,6 +100,7 @@ async function main() {
     name: "Admin",
     description: null,
     isSystem: false,
+    isOwner: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

@@ -64,12 +64,14 @@ export class RoleService {
     }
     // 37. se agrega transaction para manejar transactio support
     //44. se agrega isSystem
+    //45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
     return this.roleRepository.create(
       {
         organizationId,
         name,
         description,
         isSystem: input.isSystem ?? false,
+        isOwner: input.isOwner ?? false,
       },
       transaction,
     );

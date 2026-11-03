@@ -14,12 +14,14 @@ import { translatePostgresError } from "../../database/adapters/postgres/postgre
 
 //44. se agrego la column is_system para proteger el role owner
 //44. se agrego tambien en las functions
+//45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
 interface RoleRow {
   id: string;
   organization_id: string;
   name: string;
   description: string | null;
   is_system: boolean;
+  is_owner: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -37,7 +39,7 @@ export class PostgresRoleRepository implements RoleRepository {
   ): Promise<Role> {
     const id = crypto.randomUUID();
     const now = new Date();
-
+    //45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
     const sql = `
       INSERT INTO roles (
         id,
@@ -45,6 +47,7 @@ export class PostgresRoleRepository implements RoleRepository {
         name,
         description,
         is_system,
+        is_owner,
         created_at,
         updated_at
       )
@@ -55,6 +58,7 @@ export class PostgresRoleRepository implements RoleRepository {
         name,
         description,
         is_system,
+        is_owner,
         created_at,
         updated_at
     `;
@@ -95,6 +99,7 @@ export class PostgresRoleRepository implements RoleRepository {
           name,
           description,
           is_system,
+          isOwner,
           created_at,
           updated_at
         FROM roles
@@ -120,6 +125,7 @@ export class PostgresRoleRepository implements RoleRepository {
           name,
           description,
           is_system,
+          isOwner,
           created_at,
           updated_at
         FROM roles
@@ -143,6 +149,7 @@ export class PostgresRoleRepository implements RoleRepository {
           name,
           description,
           is_system,
+          isOwner,
           created_at,
           updated_at
         FROM roles
@@ -190,6 +197,7 @@ export class PostgresRoleRepository implements RoleRepository {
             name,
             description,
             is_system,
+            is_owner,
             created_at,
             updated_at
         `,
@@ -218,6 +226,7 @@ export class PostgresRoleRepository implements RoleRepository {
     }
   }
 
+  //45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
   private toRole(row: RoleRow): Role {
     return {
       id: row.id,
@@ -225,6 +234,7 @@ export class PostgresRoleRepository implements RoleRepository {
       name: row.name,
       description: row.description,
       isSystem: row.is_system,
+      isOwner: row.is_owner,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

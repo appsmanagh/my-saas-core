@@ -37,4 +37,11 @@ export interface OrganizationRepository {
   ): Promise<Organization | null>;
 
   delete(id: string): Promise<void>;
+
+  //45. con esta function:La idea es que PostgreSQL bloquee temporalmente la fila de una organización mientras ejecutamos una operación sensible sobre sus propietarios.
+  //45. consulta dentro de una transacción y bloquea la fila.
+  lockById(
+    id: string,
+    transaction: DatabaseTransaction,
+  ): Promise<Organization | null>;
 }

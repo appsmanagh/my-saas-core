@@ -79,6 +79,35 @@ export class PostgresOrganizationRepository
     return row ? this.toOrganization(row) : null;
   }
 
+  //45. con esta function:La idea es que PostgreSQL bloquee temporalmente la fila de una organización mientras ejecutamos una operación sensible sobre sus propietarios.
+  //45. consulta dentro de una transacción y bloquea la fila.
+  async lockById(
+    id: string,
+    transaction: DatabaseTransaction,
+  ): Promise<Organization | null> {
+
+    // 45. ¿Qué hace FOR UPDATE?
+    //   Imagina dos solicitudes simultáneas:
+    //   1. Solicitud A quiere eliminar al propietario 1.
+    //   2. Solicitud B quiere eliminar al propietario 2.
+    //   3. Ambas intentan bloquear la misma organización.
+    //   4. PostgreSQL permite que una obtenga el bloqueo primero.
+    //   5. La segunda espera hasta que la primera termine su transacción.
+    const rows = await transaction.query<OrganizationRow>(
+      `
+        SELECT id, name, slug, created_at, updated_at
+        FROM organizations
+        WHERE id = $1
+        FOR UPDATE
+      `,
+      [id],
+    );
+
+    const row = rows[0];
+
+    return row ? this.toOrganization(row) : null;
+  }
+
   async findBySlug(slug: string): Promise<Organization | null> {
     const rows = await this.database.query<OrganizationRow>(
       `
