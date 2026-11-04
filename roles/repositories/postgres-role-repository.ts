@@ -51,7 +51,7 @@ export class PostgresRoleRepository implements RoleRepository {
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING
         id,
         organization_id,
@@ -69,6 +69,7 @@ export class PostgresRoleRepository implements RoleRepository {
       input.name,
       input.description ?? null,
       input.isSystem ?? false,
+      input.isOwner ?? false,
       now,
       now,
     ];
@@ -90,23 +91,30 @@ export class PostgresRoleRepository implements RoleRepository {
     }
   }
 
-  async findById(id: string): Promise<Role | null> {
-    const rows = await this.database.query<RoleRow>(
-      `
-        SELECT
-          id,
-          organization_id,
-          name,
-          description,
-          is_system,
-          isOwner,
-          created_at,
-          updated_at
-        FROM roles
-        WHERE id = $1
-      `,
-      [id],
-    );
+  //47. este method recibira transacion, para transactio support
+  async findById(
+    id: string,
+    transaction?: DatabaseTransaction,
+  ): Promise<Role | null> {
+    const sql = `
+      SELECT
+        id,
+        organization_id,
+        name,
+        description,
+        is_system,
+        is_owner,
+        created_at,
+        updated_at
+      FROM roles
+      WHERE id = $1
+    `;
+
+    const values = [id];
+
+    const rows = transaction
+      ? await transaction.query<RoleRow>(sql, values)
+      : await this.database.query<RoleRow>(sql, values);
 
     const row = rows[0];
 
@@ -125,7 +133,7 @@ export class PostgresRoleRepository implements RoleRepository {
           name,
           description,
           is_system,
-          isOwner,
+          is_owner,
           created_at,
           updated_at
         FROM roles
@@ -149,7 +157,7 @@ export class PostgresRoleRepository implements RoleRepository {
           name,
           description,
           is_system,
-          isOwner,
+          is_owner,
           created_at,
           updated_at
         FROM roles

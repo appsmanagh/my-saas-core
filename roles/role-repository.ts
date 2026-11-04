@@ -21,7 +21,11 @@ input: CreateRoleInput,
 transaction?: DatabaseTransaction,
 ): Promise<Role>;
 
-findById(id: string): Promise<Role | null>;
+ //47. este method recibira transacion, para transactio support
+findById(
+  id: string,
+  transaction?: DatabaseTransaction,
+): Promise<Role | null>;
 
 findByName(
 organizationId: string,

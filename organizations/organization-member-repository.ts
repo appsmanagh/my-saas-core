@@ -21,9 +21,13 @@ export interface OrganizationMemberRepository {
     transaction?: DatabaseTransaction,
   ): Promise<OrganizationMember>;
 
-  findByUserAndOrganization(
+
+  //47. este method recibira transacion, para transactio support
+
+ findByUserAndOrganization(
     userId: string,
     organizationId: string,
+    transaction?: DatabaseTransaction,
   ): Promise<OrganizationMember | null>;
 
 //40. se agrega este metodo para llamar a las organization del usuario logueado
@@ -49,6 +53,18 @@ export interface OrganizationMemberRepository {
     organizationId: string,
     transaction?: DatabaseTransaction,
   ): Promise<void>;
+
+  //46. method para ver users con role owner
+//   Porque necesitamos que estas operaciones sucedan dentro de una misma transacción:
+// 1. Bloquear la organización (lockById).
+// 2. Consultar cuántos propietarios existen.
+// 3. Comprobar que no estamos eliminando al último.
+// 4. Cambiar el rol o eliminar la membresía.
+// Así evitamos que dos solicitudes concurrentes eliminen simultáneamente a los dos últimos propietarios.
+  countOwnersByOrganization(
+    organizationId: string,
+    transaction: DatabaseTransaction,
+  ): Promise<number>;
 }
 
  

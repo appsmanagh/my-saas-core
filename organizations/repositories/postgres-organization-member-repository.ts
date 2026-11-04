@@ -68,19 +68,24 @@ async create(
   }
 
 
+  //47. este method recibira transacion, para transactio support
   async findByUserAndOrganization(
     userId: string,
     organizationId: string,
+    transaction?: DatabaseTransaction,
   ): Promise<OrganizationMember | null> {
-    const rows = await this.database.query<OrganizationMemberRow>(
-      `
-        SELECT user_id, organization_id, role_id, created_at
-        FROM organization_members
-        WHERE user_id = $1
-          AND organization_id = $2
-      `,
-      [userId, organizationId],
-    );
+    const sql = `
+      SELECT user_id, organization_id, role_id, created_at
+      FROM organization_members
+      WHERE user_id = $1
+        AND organization_id = $2
+    `;
+
+    const values = [userId, organizationId];
+
+    const rows = transaction
+      ? await transaction.query<OrganizationMemberRow>(sql, values)
+      : await this.database.query<OrganizationMemberRow>(sql, values);
 
     const row = rows[0];
 
@@ -180,6 +185,33 @@ async create(
       roleId: row.role_id,
       createdAt: row.created_at,
     };
+  }
+
+  
+
+  //46. ¿Qué hace la consulta?
+// 1. Busca las membresías de la organización.
+// 2. Relaciona cada membresía con su rol.
+// 3. Filtra los roles que tienen is_owner = TRUE.
+// 4. Cuenta cuántos miembros tienen esos roles.
+  async countOwnersByOrganization(
+  organizationId: string,
+  transaction: DatabaseTransaction,
+  ): Promise<number> {
+    const rows = await transaction.query<{ count: string }>(
+      `
+        SELECT COUNT(*) AS count
+        FROM organization_members AS om
+        INNER JOIN roles AS r
+          ON r.id = om.role_id
+        AND r.organization_id = om.organization_id
+        WHERE om.organization_id = $1
+          AND r.is_owner = TRUE
+      `,
+      [organizationId],
+    );
+
+    return Number(rows[0]?.count ?? 0);
   }
 }
  

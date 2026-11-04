@@ -54,6 +54,10 @@ class FakeOrganizationMemberRepository
   }
 
   async delete(): Promise<void> {}
+
+  async countOwnersByOrganization(): Promise<number> {
+    return 0;
+  }
 }
 
 class FakeRoleService {
@@ -77,6 +81,10 @@ class FakeRolePermissionService {
 
   async getPermissionsByRole(roleId: string): Promise<PermissionKey[]> {
     return [...(this.assignments.get(roleId) ?? [])];
+  }
+
+  async countOwnersByOrganization(): Promise<number> {
+    return 0;
   }
 }
 
@@ -193,6 +201,7 @@ async function main() {
   findByOrganization: async () => [],
   updateRole: async () => null,
   delete: async () => {},
+  countOwnersByOrganization: async () => 0,
 };
 
 const failingService = new AuthorizationService(

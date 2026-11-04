@@ -5,10 +5,14 @@ import type {
   CreateOrganizationMemberInput,
 } from "../organization-member";
 import type { OrganizationMemberRepository } from "../organization-member-repository";
+import type { DatabaseTransaction } from "../../database/transactional-database";
 
 export class InMemoryOrganizationMemberRepository
   implements OrganizationMemberRepository
 {
+  constructor(
+    private readonly isOwnerRole: (roleId: string) => boolean = () => false,
+  ) {}
   private readonly members = new Map<string, OrganizationMember>();
 
   private getKey(userId: string, organizationId: string): string {
@@ -73,5 +77,16 @@ export class InMemoryOrganizationMemberRepository
 
   async delete(userId: string, organizationId: string): Promise<void> {
     this.members.delete(this.getKey(userId, organizationId));
+  }
+
+  async countOwnersByOrganization(
+    organizationId: string,
+    _transaction: DatabaseTransaction,
+  ): Promise<number> {
+    return [...this.members.values()].filter(
+      (member) =>
+        member.organizationId === organizationId &&
+        this.isOwnerRole(member.roleId),
+    ).length;
   }
 }
