@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 
 import type {
   Role,
-  CreateRoleInput,
+  CreateRoleRecord,
   UpdateRoleInput,
 } from "../../roles/role";
 
@@ -32,7 +32,7 @@ import {
 class InMemoryRoleRepository implements RoleRepository {
   private roles = new Map<string, Role>();
 
-  async create(input: CreateRoleInput): Promise<Role> {
+  async create(input: CreateRoleRecord): Promise<Role> {
     const now = new Date();
 
     const role: Role = {
@@ -40,8 +40,8 @@ class InMemoryRoleRepository implements RoleRepository {
       organizationId: input.organizationId,
       name: input.name,
       description: input.description ?? null,
-      isSystem: false,
-      isOwner: input.isOwner ?? false,
+      isSystem: input.isSystem,
+      isOwner: input.isOwner,
       createdAt: now,
       updatedAt: now,
     };

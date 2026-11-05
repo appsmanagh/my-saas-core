@@ -44,6 +44,8 @@ async function main() {
     organizationId: "org-123",
     name: "Admin",
     description: "Administrator role",
+    isSystem: false,
+    isOwner: false,
   });
 
   assert.equal(created.id, "role-123");

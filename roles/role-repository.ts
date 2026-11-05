@@ -4,6 +4,7 @@ import type {
 Role,
 CreateRoleInput,
 UpdateRoleInput,
+CreateRoleRecord
 } from "./role";
 
 import type { DatabaseTransaction } from "../database/transactional-database";
@@ -17,9 +18,9 @@ export interface RoleRepository {
   // await roleRepository.create(input);
   
 create(
-input: CreateRoleInput,
-transaction?: DatabaseTransaction,
-): Promise<Role>;
+    input: CreateRoleRecord,
+    transaction?: DatabaseTransaction,
+  ): Promise<Role>;
 
  //47. este method recibira transacion, para transactio support
 findById(
@@ -28,8 +29,9 @@ findById(
 ): Promise<Role | null>;
 
 findByName(
-organizationId: string,
-name: string,
+  organizationId: string,
+  name: string,
+  transaction?: DatabaseTransaction,
 ): Promise<Role | null>;
 
 findByOrganization(

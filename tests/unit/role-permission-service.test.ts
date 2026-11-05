@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import type {
   Role,
-  CreateRoleInput,
+  CreateRoleRecord,
   UpdateRoleInput,
 } from "../../roles/role";
 import type { RoleRepository } from "../../roles/role-repository";
@@ -25,7 +25,7 @@ import {
 class InMemoryRoleRepository implements RoleRepository {
   private readonly roles = new Map<string, Role>();
 
-  async create(input: CreateRoleInput): Promise<Role> {
+  async create(input: CreateRoleRecord): Promise<Role> {
     const now = new Date();
 
     const role: Role = {
@@ -33,8 +33,8 @@ class InMemoryRoleRepository implements RoleRepository {
       organizationId: input.organizationId,
       name: input.name,
       description: input.description ?? null,
-      isSystem: input.isSystem ?? false,
-      isOwner: input.isOwner ?? false,
+      isSystem: input.isSystem ,
+      isOwner: input.isOwner ,
       createdAt: now,
       updatedAt: now,
     };
@@ -279,10 +279,11 @@ async function main() {
 
 
     // 9. Create a system role.
-  const ownerRole = await roleService.createRole({
+  const ownerRole = await roleRepository.create({
     organizationId: "org-1",
     name: "Owner",
     isSystem: true,
+    isOwner: true,
   });
 
   await service.assignPermissions(ownerRole.id, [

@@ -73,11 +73,15 @@ async function main() {
     const roleA = await roleRepository.create({
       organizationId: organizationA.id,
       name: "Member",
+      isSystem: false,
+      isOwner: false,
     });
 
     const roleB = await roleRepository.create({
       organizationId: organizationB.id,
       name: "Administrator",
+      isSystem: false,
+      isOwner: false,
     });
 
     console.log("PASS create test user, organizations and roles");
@@ -201,6 +205,8 @@ async function main() {
     const anotherRoleA = await roleRepository.create({
       organizationId: organizationA.id,
       name: "Manager",
+      isSystem: false,
+      isOwner: false,
     });
 
     const updated = await memberRepository.updateRole(

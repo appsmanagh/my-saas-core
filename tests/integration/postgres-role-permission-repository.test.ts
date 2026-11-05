@@ -50,6 +50,8 @@ async function main() {
     const role = await roleRepository.create({
       organizationId: organization.id,
       name: "Permission Tester",
+      isSystem: false,
+      isOwner: false,
     });
 
     roleId = role.id;

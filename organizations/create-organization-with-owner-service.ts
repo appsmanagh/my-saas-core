@@ -64,19 +64,17 @@ export class CreateOrganizationWithOwnerService {
       // 2. Crear el rol Owner dentro de la misma transacción.
       //44. se agrega la column isSystem
       //45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
-      const ownerRole = await this.roleService.createRole(
+      const ownerRole = await this.roleService.createSystemRole(
         {
           organizationId: organization.id,
           name: "Owner",
           description: "Organization owner",
-          isSystem: true,
-          isOwner: true,
         },
         transaction,
       );
 
       // 3. Asignar los permisos al Owner usando esa transacción.
-      await this.rolePermissionService.assignPermissions(
+      await this.rolePermissionService.assignSystemRolePermissions(
         ownerRole.id,
         OWNER_PERMISSIONS,
         transaction,

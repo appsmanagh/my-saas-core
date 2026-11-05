@@ -33,6 +33,9 @@ export class RoleService {
     private readonly roleRepository: RoleRepository,
   ) {}
   // 37. se agrega DatabaseTransaction para manejar transactio support
+  // RoleService
+
+  //47. proteger la creación de roles
   async createRole(
     input: CreateRoleInput,
     transaction?: DatabaseTransaction,
@@ -42,36 +45,75 @@ export class RoleService {
     const description = input.description?.trim() || null;
 
     if (!organizationId) {
-      throw new ValidationError(
-        "Organization ID is required",
-      );
+      throw new ValidationError("Organization ID is required");
     }
 
     if (!name) {
       throw new ValidationError("Role name is required");
     }
 
-    const existingRole =
-      await this.roleRepository.findByName(
-        organizationId,
-        name,
-      );
+    const existingRole = await this.roleRepository.findByName(
+      organizationId,
+      name,
+      transaction,
+    );
 
     if (existingRole) {
       throw new ConflictError(
         "A role with this name already exists in this organization",
       );
     }
+
     // 37. se agrega transaction para manejar transactio support
-    //44. se agrega isSystem
-    //45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
+      //44. se agrega isSystem
+      //45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
     return this.roleRepository.create(
       {
         organizationId,
         name,
         description,
-        isSystem: input.isSystem ?? false,
-        isOwner: input.isOwner ?? false,
+        isSystem: false,
+        isOwner: false,
+      },
+      transaction,
+    );
+  }
+
+  //proteger la creación de roles
+  async createSystemRole(
+    input: CreateRoleInput,
+    transaction: DatabaseTransaction,
+  ): Promise<Role> {
+    const organizationId = input.organizationId.trim();
+    const name = input.name.trim();
+    const description = input.description?.trim() || null;
+
+    if (!organizationId) {
+      throw new ValidationError("Organization ID is required");
+    }
+
+    if (!name) {
+      throw new ValidationError("Role name is required");
+    }
+
+    const existingRole = await this.roleRepository.findByName(
+      organizationId,
+      name,
+    );
+
+    if (existingRole) {
+      throw new ConflictError(
+        "A role with this name already exists in this organization",
+      );
+    }
+
+    return this.roleRepository.create(
+      {
+        organizationId,
+        name,
+        description,
+        isSystem: true,
+        isOwner: true,
       },
       transaction,
     );

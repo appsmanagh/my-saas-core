@@ -4,9 +4,10 @@ import type { Database } from "../../database/database";
 import type { DatabaseTransaction } from "../../database/transactional-database";
 
 import type { RoleRepository } from "../role-repository";
-import type {
+
+import {
   Role,
-  CreateRoleInput,
+  CreateRoleRecord,
   UpdateRoleInput,
 } from "../role";
 
@@ -34,7 +35,7 @@ export class PostgresRoleRepository implements RoleRepository {
   // - Si llamas create(input, transaction), la inserción usa la transacción que le pasó el servicio coordinador.
   // - El SQL y la traducción de errores se mantienen en un solo lugar.
   async create(
-    input: CreateRoleInput,
+    input: CreateRoleRecord,
     transaction?: DatabaseTransaction,
   ): Promise<Role> {
     const id = crypto.randomUUID();
@@ -124,6 +125,7 @@ export class PostgresRoleRepository implements RoleRepository {
   async findByName(
     organizationId: string,
     name: string,
+    transaction?: DatabaseTransaction,
   ): Promise<Role | null> {
     const rows = await this.database.query<RoleRow>(
       `

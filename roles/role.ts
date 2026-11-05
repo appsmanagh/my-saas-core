@@ -17,8 +17,12 @@ export interface CreateRoleInput {
   organizationId: string;
   name: string;
   description?: string | null;
-  isSystem?: boolean;
-  isOwner?: boolean;
+}
+
+// Input interno utilizado por los repositorios.
+export interface CreateRoleRecord extends CreateRoleInput {
+  isSystem: boolean;
+  isOwner: boolean;
 }
 
 export interface UpdateRoleInput {

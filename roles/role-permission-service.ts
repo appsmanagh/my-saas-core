@@ -37,32 +37,59 @@ export class RolePermissionService {
     permissionKeys: PermissionKey[],
     transaction?: DatabaseTransaction,
   ): Promise<void> {
-    // Si no hay una transacción externa, validamos el rol normalmente.
-    // Si sí la hay, el rol podría haberse creado dentro de esa
-    // transacción y aún no ser visible desde una consulta independiente.
-    if (!transaction) {
-      await this.roleService.getRoleById(roleId);
-    }
+    const role = await this.roleService.getRoleById(roleId);
 
-    // Eliminar duplicados preservando el orden.
-    const uniqueKeys = [...new Set(permissionKeys)];
-
-    if (uniqueKeys.length === 0) {
+    if (role.isSystem) {
       throw new ValidationError(
-        "At least one permission is required",
+        "Permissions of system roles cannot be modified",
       );
     }
 
-    // Validar que todas las claves existan en el catálogo.
+    await this.assignValidatedPermissions(
+      roleId,
+      permissionKeys,
+      transaction,
+    );
+  }
+
+  async assignSystemRolePermissions(
+    roleId: string,
+    permissionKeys: PermissionKey[],
+    transaction: DatabaseTransaction,
+  ): Promise<void> {
+    // Esta operación solo se utiliza desde flujos internos
+    // que crean y configuran roles del sistema.
+    await this.assignValidatedPermissions(
+      roleId,
+      permissionKeys,
+      transaction,
+    );
+  }
+
+  private async assignValidatedPermissions(
+    roleId: string,
+    permissionKeys: PermissionKey[],
+    transaction?: DatabaseTransaction,
+  ): Promise<void> {
+    if (!roleId.trim()) {
+      throw new ValidationError("Role ID is required");
+    }
+
+    const uniqueKeys = [...new Set(permissionKeys)];
+
+    if (uniqueKeys.length === 0) {
+      throw new ValidationError("At least one permission is required");
+    }
+
     await this.permissionService.getPermissionsByKeys(uniqueKeys);
 
-    // Usar la transacción compartida, si se proporcionó.
     await this.rolePermissionRepository.assignMany(
       roleId,
       uniqueKeys,
       transaction,
     );
   }
+
 
   //44. se modifica esta function para manejar el rol owner
  async removePermission(
@@ -71,21 +98,15 @@ export class RolePermissionService {
   ): Promise<void> {
     const role = await this.roleService.getRoleById(roleId);
 
-    await this.permissionService.getPermissionByKey(permissionKey);
-
-    if (
-      role.isSystem &&
-      PROTECTED_OWNER_PERMISSIONS.includes(permissionKey)
-    ) {
+    if (role.isSystem) {
       throw new ValidationError(
-        "Cannot remove a protected permission from a system role",
+        "Permissions of system roles cannot be modified",
       );
     }
 
-    await this.rolePermissionRepository.remove(
-      roleId,
-      permissionKey,
-    );
+    await this.permissionService.getPermissionByKey(permissionKey);
+
+    await this.rolePermissionRepository.remove(roleId, permissionKey);
   }
 
   async getPermissionsByRole(

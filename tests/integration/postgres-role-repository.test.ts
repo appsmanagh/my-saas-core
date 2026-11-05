@@ -35,6 +35,8 @@ async function main() {
       organizationId: organization.id,
       name: "Admin",
       description: "Administrator role",
+      isSystem: false,
+      isOwner: false,
     });
 
     roleId = role.id;
@@ -51,6 +53,8 @@ async function main() {
         organizationId: organization.id,
         name: "Admin",
         description: "Duplicate role",
+        isSystem: false,
+        isOwner: false,
       });
     } catch (error) {
       duplicateRejected = true;
@@ -78,6 +82,8 @@ async function main() {
         organizationId: anotherOrganization.id,
         name: "Admin",
         description: "Admin in another organization",
+        isSystem: false,
+        isOwner: false,
       });
 
       assert.equal(otherRole.name, "Admin");
@@ -104,6 +110,8 @@ async function main() {
     const cascadeRole = await roleRepository.create({
       organizationId: cascadeOrganization.id,
       name: "Temporary Role",
+      isSystem: false,
+      isOwner: false,
     });
 
     await organizationRepository.delete(cascadeOrganization.id);
