@@ -1,26 +1,16 @@
 
+
 // 26. Este servicio coordinará tres cosas:
 // Comprobar que el rol existe.
 // Verificar que los permisos solicitados están definidos en nuestro catálogo.
 // Asignar, retirar y consultar los permisos del rol.
-
 import type { PermissionKey } from "../permissions/permission";
 import type { PermissionService } from "../permissions/permission-service";
 import type { RolePermissionRepository } from "./role-permission-repository";
 import type { RoleService } from "./role-service";
 import { ValidationError } from "../errors";
-
 //37. se inporta el modulo de transaction para transaction support para organization+rolowner+permissions+membresia
 import type { DatabaseTransaction } from "../database/transactional-database";
-
-//44. se agrega esta lista de permiusos protegidos del owner
-const PROTECTED_OWNER_PERMISSIONS: PermissionKey[] = [
-  "roles:read",
-  "roles:create",
-  "roles:update",
-  "roles:delete",
-  "roles:assign",
-];
 
 export class RolePermissionService {
   constructor(
@@ -29,7 +19,6 @@ export class RolePermissionService {
     private readonly rolePermissionRepository: RolePermissionRepository,
   ) {}
 
- 
   //34. esta es la function que se encargar de asignar permissions y ya cuenta con transaction support
   // 37. se agrega DatabaseTransaction para manejar transactio support
   async assignPermissions(
@@ -37,7 +26,10 @@ export class RolePermissionService {
     permissionKeys: PermissionKey[],
     transaction?: DatabaseTransaction,
   ): Promise<void> {
-    const role = await this.roleService.getRoleById(roleId);
+    const role = await this.roleService.getRoleById(
+      roleId,
+      transaction,
+    );
 
     if (role.isSystem) {
       throw new ValidationError(
@@ -52,13 +44,30 @@ export class RolePermissionService {
     );
   }
 
+  // Asignación especial para roles del sistema.
+  // Reservada para flujos internos como el onboarding.
   async assignSystemRolePermissions(
     roleId: string,
     permissionKeys: PermissionKey[],
     transaction: DatabaseTransaction,
   ): Promise<void> {
-    // Esta operación solo se utiliza desde flujos internos
-    // que crean y configuran roles del sistema.
+    const role = await this.roleService.getRoleById(
+      roleId,
+      transaction,
+    );
+
+    if (!role.isSystem) {
+      throw new ValidationError(
+        "This operation is only allowed for system roles",
+      );
+    }
+
+    if (!role.isOwner) {
+      throw new ValidationError(
+        "This operation is only allowed for the Owner role",
+      );
+    }
+
     await this.assignValidatedPermissions(
       roleId,
       permissionKeys,
@@ -66,6 +75,7 @@ export class RolePermissionService {
     );
   }
 
+  // Validación compartida antes de persistir los permisos.
   private async assignValidatedPermissions(
     roleId: string,
     permissionKeys: PermissionKey[],
@@ -78,7 +88,9 @@ export class RolePermissionService {
     const uniqueKeys = [...new Set(permissionKeys)];
 
     if (uniqueKeys.length === 0) {
-      throw new ValidationError("At least one permission is required");
+      throw new ValidationError(
+        "At least one permission is required",
+      );
     }
 
     await this.permissionService.getPermissionsByKeys(uniqueKeys);
@@ -90,9 +102,8 @@ export class RolePermissionService {
     );
   }
 
-
-  //44. se modifica esta function para manejar el rol owner
- async removePermission(
+   //44. se modifica esta function para manejar el rol owner
+  async removePermission(
     roleId: string,
     permissionKey: PermissionKey,
   ): Promise<void> {
@@ -104,15 +115,19 @@ export class RolePermissionService {
       );
     }
 
-    await this.permissionService.getPermissionByKey(permissionKey);
+    await this.permissionService.getPermissionByKey(
+      permissionKey,
+    );
 
-    await this.rolePermissionRepository.remove(roleId, permissionKey);
+    await this.rolePermissionRepository.remove(
+      roleId,
+      permissionKey,
+    );
   }
 
   async getPermissionsByRole(
     roleId: string,
   ): Promise<PermissionKey[]> {
-    // Avoid returning an empty list for a role that doesn't exist.
     await this.roleService.getRoleById(roleId);
 
     return this.rolePermissionRepository.findPermissionKeysByRoleId(

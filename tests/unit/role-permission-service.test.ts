@@ -17,6 +17,8 @@ import { PermissionService } from "../../permissions/permission-service";
 import type { RolePermissionRepository } from "../../roles/role-permission-repository";
 import { RolePermissionService } from "../../roles/role-permission-service";
 
+import type { DatabaseTransaction } from "../../database/transactional-database";
+
 import {
   ValidationError,
   NotFoundError,
@@ -278,7 +280,8 @@ async function main() {
   console.log("PASS: reject removal of unknown permission");
 
 
-    // 9. Create a system role.
+  
+  // 9. Create a system Owner role.
   const ownerRole = await roleRepository.create({
     organizationId: "org-1",
     name: "Owner",
@@ -286,13 +289,69 @@ async function main() {
     isOwner: true,
   });
 
-  await service.assignPermissions(ownerRole.id, [
-    PERMISSION_KEYS.ROLES_READ,
-  ]);
+  // La transacción es simulada porque este test utiliza
+  // repositorios en memoria, no una base de datos real.
+  const transaction = {} as DatabaseTransaction;
 
-  console.log("PASS: create system role");
+  // 9.1. Normal assignment must reject system roles.
+  await assert.rejects(
+    () =>
+      service.assignPermissions(ownerRole.id, [
+        PERMISSION_KEYS.ROLES_READ,
+      ]),
+    ValidationError,
+  );
 
-  // 10. A system role cannot lose protected permissions.
+  console.log("PASS: reject normal permission assignment to system roles");
+
+  // 9.2. The special method can configure the Owner role.
+  await service.assignSystemRolePermissions(
+    ownerRole.id,
+    [PERMISSION_KEYS.ROLES_READ],
+    transaction,
+  );
+
+  let ownerPermissions =
+    await service.getPermissionsByRole(ownerRole.id);
+
+  assert.ok(ownerPermissions.includes(PERMISSION_KEYS.ROLES_READ));
+
+  console.log("PASS: assign initial permissions to Owner");
+
+  // 9.3. The special method cannot configure normal roles.
+  await assert.rejects(
+    () =>
+      service.assignSystemRolePermissions(
+        role.id,
+        [PERMISSION_KEYS.ROLES_READ],
+        transaction,
+      ),
+    ValidationError,
+  );
+
+  console.log("PASS: reject system permission assignment to normal roles");
+
+  // 9.4. A system role that is not Owner cannot use the special method.
+  const anotherSystemRole = await roleRepository.create({
+    organizationId: "org-1",
+    name: "System Manager",
+    isSystem: true,
+    isOwner: false,
+  });
+
+  await assert.rejects(
+    () =>
+      service.assignSystemRolePermissions(
+        anotherSystemRole.id,
+        [PERMISSION_KEYS.ROLES_READ],
+        transaction,
+      ),
+    ValidationError,
+  );
+
+  console.log("PASS: reject special assignment to non-owner system roles");
+
+  // 10. System roles cannot lose permissions.
   await assert.rejects(
     () =>
       service.removePermission(
@@ -302,8 +361,7 @@ async function main() {
     ValidationError,
   );
 
-  const ownerPermissions =
-    await service.getPermissionsByRole(ownerRole.id);
+  ownerPermissions = await service.getPermissionsByRole(ownerRole.id);
 
   assert.ok(ownerPermissions.includes(PERMISSION_KEYS.ROLES_READ));
 
@@ -325,6 +383,7 @@ async function main() {
   assert.ok(!normalRolePermissions.includes(PERMISSION_KEYS.ROLES_READ));
 
   console.log("PASS: normal roles can remove permissions");
+
 }
 
 main().catch((error) => {

@@ -24,7 +24,7 @@ export interface CreateOrganizationWithOwnerResult {
   membership: OrganizationMember;
 }
 
-// Permisos que recibe el propietario al crear una organización.
+// Permisos iniciales del propietario de una organización.
 const OWNER_PERMISSIONS: PermissionKey[] = [
   "users:read",
   "users:update",
@@ -50,8 +50,12 @@ export class CreateOrganizationWithOwnerService {
     userId: string,
   ): Promise<CreateOrganizationWithOwnerResult> {
     if (!userId?.trim()) {
-      throw new ValidationError("Authenticated user ID is required");
+      throw new ValidationError(
+        "Authenticated user ID is required",
+      );
     }
+
+    const authenticatedUserId = userId.trim();
 
     return this.database.transaction(async (transaction) => {
       // 1. Crear la organización dentro de la transacción.
@@ -64,7 +68,7 @@ export class CreateOrganizationWithOwnerService {
       // 2. Crear el rol Owner dentro de la misma transacción.
       //44. se agrega la column isSystem
       //45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
-      const ownerRole = await this.roleService.createSystemRole(
+      const ownerRole = await this.roleService.createOwnerRole(
         {
           organizationId: organization.id,
           name: "Owner",
@@ -84,7 +88,7 @@ export class CreateOrganizationWithOwnerService {
       const membership =
         await this.organizationMemberRepository.create(
           {
-            userId,
+            userId: authenticatedUserId,
             organizationId: organization.id,
             roleId: ownerRole.id,
           },

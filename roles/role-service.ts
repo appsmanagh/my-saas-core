@@ -1,4 +1,5 @@
 
+
 //26. este es el service de roles se enrga de manejar la logica de negocio
 // 26. ¿Qué acabamos de conseguir?
 // Validación
@@ -24,7 +25,6 @@ import {
   ConflictError,
 } from "../errors";
 
-
 //37. se inporta el modulo de transaction para transaction support para organization+rolowner+permissions+membresia
 import type { DatabaseTransaction } from "../database/transactional-database";
 
@@ -32,10 +32,11 @@ export class RoleService {
   constructor(
     private readonly roleRepository: RoleRepository,
   ) {}
-  // 37. se agrega DatabaseTransaction para manejar transactio support
+
+   // 37. se agrega DatabaseTransaction para manejar transactio support
   // RoleService
 
-  //47. proteger la creación de roles
+  //47. proteger la creación de roles.
   async createRole(
     input: CreateRoleInput,
     transaction?: DatabaseTransaction,
@@ -63,8 +64,7 @@ export class RoleService {
         "A role with this name already exists in this organization",
       );
     }
-
-    // 37. se agrega transaction para manejar transactio support
+     // 37. se agrega transaction para manejar transactio support
       //44. se agrega isSystem
       //45. se agrega la column isOwner: boolean;, para proteger al ultimo propietario
     return this.roleRepository.create(
@@ -79,8 +79,10 @@ export class RoleService {
     );
   }
 
-  //proteger la creación de roles
-  async createSystemRole(
+  // Creación del rol Owner.
+  // Este método se utiliza desde el flujo interno de onboarding,
+  // nunca directamente desde una ruta HTTP pública.
+  async createOwnerRole(
     input: CreateRoleInput,
     transaction: DatabaseTransaction,
   ): Promise<Role> {
@@ -99,6 +101,7 @@ export class RoleService {
     const existingRole = await this.roleRepository.findByName(
       organizationId,
       name,
+      transaction,
     );
 
     if (existingRole) {
@@ -119,12 +122,18 @@ export class RoleService {
     );
   }
 
-  async getRoleById(id: string): Promise<Role> {
+  async getRoleById(
+    id: string,
+    transaction?: DatabaseTransaction,
+  ): Promise<Role> {
     if (!id.trim()) {
       throw new ValidationError("Role ID is required");
     }
 
-    const role = await this.roleRepository.findById(id);
+    const role = await this.roleRepository.findById(
+      id,
+      transaction,
+    );
 
     if (!role) {
       throw new NotFoundError("Role not found");
@@ -137,9 +146,7 @@ export class RoleService {
     organizationId: string,
   ): Promise<Role[]> {
     if (!organizationId.trim()) {
-      throw new ValidationError(
-        "Organization ID is required",
-      );
+      throw new ValidationError("Organization ID is required");
     }
 
     return this.roleRepository.findByOrganization(
@@ -165,17 +172,14 @@ export class RoleService {
       const name = input.name.trim();
 
       if (!name) {
-        throw new ValidationError(
-          "Role name is required",
-        );
+        throw new ValidationError("Role name is required");
       }
 
       if (name !== role.name) {
-        const existingRole =
-          await this.roleRepository.findByName(
-            role.organizationId,
-            name,
-          );
+        const existingRole = await this.roleRepository.findByName(
+          role.organizationId,
+          name,
+        );
 
         if (existingRole) {
           throw new ConflictError(
@@ -188,8 +192,7 @@ export class RoleService {
     }
 
     if (input.description !== undefined) {
-      updates.description =
-        input.description?.trim() || null;
+      updates.description = input.description?.trim() || null;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -198,8 +201,10 @@ export class RoleService {
       );
     }
 
-    const updatedRole =
-      await this.roleRepository.update(id, updates);
+    const updatedRole = await this.roleRepository.update(
+      id,
+      updates,
+    );
 
     if (!updatedRole) {
       throw new NotFoundError("Role not found");
