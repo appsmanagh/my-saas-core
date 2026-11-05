@@ -19,10 +19,14 @@ import type { AuthorizationService } from "../../authorization/authorization-ser
 import type { PermissionKey } from "../../permissions/permission";
 
 import { createPermissionMiddleware } from "../middleware/permission-middleware";
-import { ForbiddenError } from "../../errors";
+import { ForbiddenError, UnauthorizedError } from "../../errors";
 
 //43. se necesita este service rolpermission
 import type { RolePermissionService } from "../../roles/role-permission-service";
+
+import type { OrganizationMemberRepository } from "../../organizations/organization-member-repository";
+
+
 
 //43. se injecta RolePermissionService al constructor 
 export function createRoleRoutes(
@@ -30,6 +34,7 @@ export function createRoleRoutes(
   rolePermissionService: RolePermissionService,
   authorizationService: AuthorizationService,
   requireAuth: RequestHandler,
+  organizationMemberRepository: OrganizationMemberRepository,
 ) {
   const router = Router();
 
@@ -40,6 +45,32 @@ export function createRoleRoutes(
       authorizationService,
       permissionKey,
     );
+
+  const preventSelfRoleModification = async (
+    request: Request,
+    organizationId: string,
+    roleId: string,
+  ): Promise<void> => {
+    if (!request.user) {
+      throw new UnauthorizedError("Authentication required");
+    }
+
+    const membership =
+      await organizationMemberRepository.findByUserAndOrganization(
+        request.user.id,
+        organizationId,
+      );
+
+    if (!membership) {
+      throw new ForbiddenError("Organization membership not found");
+    }
+
+    if (membership.roleId === roleId) {
+      throw new ForbiddenError(
+        "You cannot modify your own assigned role",
+      );
+    }
+  };
 
   //41. GET /api/organizations/:organizationId/roles
   //41. Lista los roles de una organización si el usuario tiene permiso.
@@ -121,9 +152,6 @@ export function createRoleRoutes(
       }
     },
   );
-
-
-
   // 43. Asignar varios permisos a un rol.
   //43. POST /api/organizations/:organizationId/roles/:roleId/permissions
   //43. permite asignar varios permisos a un rol.
@@ -158,6 +186,12 @@ export function createRoleRoutes(
           });
           return;
         }
+
+        await preventSelfRoleModification(
+          request,
+          organizationId,
+          roleId,
+        );
 
         const existingRole =
           await roleService.getRoleById(roleId);
@@ -237,6 +271,12 @@ export function createRoleRoutes(
           return;
         }
 
+        await preventSelfRoleModification(
+          request,
+          organizationId,
+          roleId,
+        );
+
         const existingRole =
           await roleService.getRoleById(roleId);
 
@@ -290,6 +330,12 @@ export function createRoleRoutes(
           return;
         }
 
+        await preventSelfRoleModification(
+          request,
+          organizationId,
+          roleId,
+        );
+
         const existingRole =
           await roleService.getRoleById(roleId);
 
@@ -340,6 +386,12 @@ export function createRoleRoutes(
           });
           return;
         }
+
+        await preventSelfRoleModification(
+          request,
+          organizationId,
+          roleId,
+        );
 
         const existingRole =
           await roleService.getRoleById(roleId);

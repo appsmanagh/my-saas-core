@@ -265,6 +265,7 @@ const requirePermission = (
       rolePermissionService,
       authorizationService,
       requireAuth,
+      organizationMemberRepository
     ),
   );
 
