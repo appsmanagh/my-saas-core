@@ -1,6 +1,10 @@
+
 // 19. Este archivo será el punto donde conectamos Express con nuestro Core.
 
-import express from "express";
+// 39. Estos son los módulos importados para transactions support.
+
+import type { Database } from "../database/database";
+import type { TransactionalDatabase } from "../database/transactional-database";
 
 import { createDatabase } from "../database/database-provider";
 
@@ -9,42 +13,19 @@ import { PostgresUserRepository } from "../users/repositories/postgres-user-repo
 
 import { PasswordService } from "../auth/password-service";
 import { PostgresAuthRepository } from "../auth/repositories/postgres-auth-repository";
-
 import { PostgresSessionRepository } from "../auth/sessions/postgres-session-repository";
-
 import { AuthService } from "../auth/auth-service";
 
-import { createAuthRoutes } from "./routes/auth-routes";
-import { createAuthMiddleware } from "./middleware/auth-middleware";
-
-//19. Express necesita un pequeño middleware adicional para manejar cookies correctamente.
-import cookieParser from "cookie-parser";
-
-
-//19. aqui se importa el middleware para traducir los errores de cada aplication de la api
-import { errorMiddleware } 
-from "./middleware/error-middleware";
-
-
-//20. asi se importa una nueva ruta de endpoints 
-import { createUserRoutes } 
-from "./routes/user-routes";
-
-//22. composition root - LoginRateLimit
+// 22. Composition root - LoginRateLimit.
 import {
   InMemoryRateLimiter,
 } from "../security/adapters/in-memory-rate-limiter";
 
-//22. composition root - LoginRateLimit
 import {
   LoginRateLimit,
 } from "../security/login-rate-limit";
 
-
-//39. estos son los nuevos modulos importados para transactions support 
-
-import type { Database } from "../database/database";
-import type { TransactionalDatabase } from "../database/transactional-database";
+// 39. Estos son los nuevos módulos para organizations y transactions support.
 
 import { PostgresOrganizationRepository } from "../organizations/repositories/postgres-organization-repository";
 import { PostgresOrganizationMemberRepository } from "../organizations/repositories/postgres-organization-member-repository";
@@ -59,25 +40,16 @@ import { RolePermissionService } from "../roles/role-permission-service";
 import { PostgresPermissionRepository } from "../permissions/repositories/postgres-permission-repository";
 import { PermissionService } from "../permissions/permission-service";
 
-import { createOrganizationRoutes } from "./routes/organization-routes";
-//39. end----
+// 39. End.
 
-//41. se importan estos modules para el feature de authorization
+// 41. Se importan estos módulos para el feature de authorization.
 import { AuthorizationService } from "../authorization/authorization-service";
-import { createPermissionMiddleware } from "./middleware/permission-middleware";
-// se agregan las rutas de roles
-import { createRoleRoutes } from "./routes/role-routes";
-//41. end ---
 
-const app = express();
+// 19. Se importa la aplicación Express ya configurada.
+import { createApp } from "./app";
 
-app.use(express.json());
-
-// 19. Express necesita un pequeño middleware adicional para manejar cookies correctamente.
-app.use(cookieParser());
-
-//39.Esta function comprueba la capacidad real del adaptador durante la ejecución. No basta con que TypeScript permita una conversión de tipos.
-
+// 39. Esta función comprueba la capacidad real del adaptador durante la ejecución.
+// No basta con que TypeScript permita una conversión de tipos.
 
 function supportsTransactions(
   database: Database,
@@ -88,121 +60,130 @@ function supportsTransactions(
     ).transaction === "function"
   );
 }
-//39. end----
+
+// 39. End.
 
 async function bootstrap() {
   const database = createDatabase();
 
   await database.connect();
 
- //39. aqui se usan los mudulos importados arriba
+  // 39. Aqui se usan los módulos importados arriba.
 
-if (!supportsTransactions(database)) {
-  await database.disconnect();
+  if (!supportsTransactions(database)) {
+    await database.disconnect();
 
-  throw new Error(
-    "Organization onboarding requires a transactional database provider.",
-  );
-}
+    throw new Error(
+      "Organization onboarding requires a transactional database provider.",
+    );
+  }
 
-const transactionalDatabase = database;
+  const transactionalDatabase = database;
 
-const organizationRepository =
-  new PostgresOrganizationRepository(database);
+  // 39. Organization repository y service.
+  const organizationRepository =
+    new PostgresOrganizationRepository(database);
 
-const organizationService =
-  new OrganizationService(organizationRepository);
+  const organizationService =
+    new OrganizationService(organizationRepository);
 
-const roleRepository =
-  new PostgresRoleRepository(database);
+  // 39. Role repository y service.
+  const roleRepository =
+    new PostgresRoleRepository(database);
 
-const roleService =
-  new RoleService(roleRepository);
+  const roleService =
+    new RoleService(roleRepository);
 
-const permissionRepository =
-  new PostgresPermissionRepository(database);
+  // 39. Permission repository y service.
+  const permissionRepository =
+    new PostgresPermissionRepository(database);
 
-const permissionService =
-  new PermissionService(permissionRepository);
+  const permissionService =
+    new PermissionService(permissionRepository);
 
-const rolePermissionRepository =
-  new PostgresRolePermissionRepository(transactionalDatabase);
+  // 39. Role permission repository y service.
+  const rolePermissionRepository =
+    new PostgresRolePermissionRepository(transactionalDatabase);
 
-const rolePermissionService =
-  new RolePermissionService(
-    roleService,
-    permissionService,
-    rolePermissionRepository,
-  );
+  const rolePermissionService =
+    new RolePermissionService(
+      roleService,
+      permissionService,
+      rolePermissionRepository,
+    );
 
-const organizationMemberRepository =
-  new PostgresOrganizationMemberRepository(
-    transactionalDatabase,
-  );
+  // 39. Organization member repository.
+  const organizationMemberRepository =
+    new PostgresOrganizationMemberRepository(
+      transactionalDatabase,
+    );
 
-const onboardingService =
-  new CreateOrganizationWithOwnerService(
-    transactionalDatabase,
-    organizationService,
-    roleService,
-    rolePermissionService,
-    organizationMemberRepository,
-  );
-//39 end---
+  // 39. Organization onboarding.
+  const onboardingService =
+    new CreateOrganizationWithOwnerService(
+      transactionalDatabase,
+      organizationService,
+      roleService,
+      rolePermissionService,
+      organizationMemberRepository,
+    );
 
-//41. se define authorizationService
-const authorizationService =
-  new AuthorizationService(
-    organizationMemberRepository,
-    roleService,
-    rolePermissionService,
-  );
+  // 39. End.
 
-//41. end ---
+  // 41. Se define authorizationService.
+  const authorizationService =
+    new AuthorizationService(
+      organizationMemberRepository,
+      roleService,
+      rolePermissionService,
+    );
 
-const userRepository =
-  new PostgresUserRepository(database);
+  // 41. End.
 
-const userService =
-  new UserService(userRepository);
+  // Users.
+  const userRepository =
+    new PostgresUserRepository(database);
 
-const passwordService =
-  new PasswordService();
+  const userService =
+    new UserService(userRepository);
 
-const authRepository =
-  new PostgresAuthRepository(database);
+  // Authentication.
+  const passwordService =
+    new PasswordService();
 
-const sessionRepository =
-  new PostgresSessionRepository(database);
+  const authRepository =
+    new PostgresAuthRepository(database);
 
-//22. composition root - LoginRateLimit
-//22 aqui es donde se hace el cambi a redis
-// Rate limiter por IP
-const ipRateLimiter =
-  new InMemoryRateLimiter(
-    10,
-    60,
-  );
+  const sessionRepository =
+    new PostgresSessionRepository(database);
 
-//22. composition root - LoginRateLimit
-  //22 aqui es donde se hace el cambi a redis
-  // Rate limiter por email
+  // 22. Composition root - LoginRateLimit.
+  // 22. Aqui es donde se hace el cambio a Redis en el futuro.
+  // Rate limiter por IP.
+  const ipRateLimiter =
+    new InMemoryRateLimiter(
+      10,
+      60,
+    );
+
+  // 22. Composition root - LoginRateLimit.
+  // 22. Aqui es donde se hace el cambio a Redis en el futuro.
+  // Rate limiter por email.
   const emailRateLimiter =
     new InMemoryRateLimiter(
       5,
       60,
     );
 
-//22. composition root - LoginRateLimit
-  //22 aqui es donde se hace el cambi a redis
-  // Política de rate limiting para login
+  // 22. Composition root - LoginRateLimit.
+  // Política de rate limiting para login.
   const loginRateLimit =
     new LoginRateLimit(
       ipRateLimiter,
       emailRateLimiter,
     );
 
-//22 se agrega loginRateLimit a AuthService
+  // 22. Se agrega loginRateLimit a AuthService.
   const authService =
     new AuthService(
       userService,
@@ -212,67 +193,19 @@ const ipRateLimiter =
       loginRateLimit,
     );
 
-  const requireAuth =
-    createAuthMiddleware(authService);
-
-//41. se define requirePermission
-const requirePermission = (
-  permissionKey: import("../permissions/permission").PermissionKey,
-  organizationIdParam = "organizationId",
-) =>
-  createPermissionMiddleware(
+  // 19. Se crea la aplicación Express conectada con nuestro Core.
+  const app = createApp({
+    userService,
+    authService,
+    organizationService,
+    onboardingService,
+    roleService,
+    rolePermissionService,
     authorizationService,
-    permissionKey,
-    organizationIdParam,
-  );
-//41. end ---
+    organizationMemberRepository,
+  });
 
-  app.use(
-    "/api/auth",
-    createAuthRoutes(
-      authService,
-      requireAuth,
-    ),
-  );
-
-//20. asi se importa una nueva ruta de endpoints 
-  app.use(
-    "/api/users",
-    createUserRoutes(
-      userService,
-      requireAuth,
-    ),
-  );
-
-  //39. aqui se llama la nueva ruta de organizations
-  //40. se se envia organizationService tambien a createOrganizationRoutes
-  app.use(
-    "/api/organizations",
-    createOrganizationRoutes(
-      organizationService,
-      onboardingService,
-      requireAuth,
-    ),
-  );
-
-  //41. se llaman los componentes del fuetiure de authorizations
-  // 41. aqui ya se usa authorizationService para saber si el user puede hacer la accion
-  //43. se agrerga el rolePermissionService a createRoleRoutes
-  app.use(
-    "/api",
-    createRoleRoutes(
-      roleService,
-      rolePermissionService,
-      authorizationService,
-      requireAuth,
-      organizationMemberRepository
-    ),
-  );
-
-  app.use(
-    errorMiddleware,
-    );
-
+  // 19. Se inicia el servidor HTTP.
   const port =
     Number(process.env.PORT) || 3001;
 
